@@ -1,6 +1,6 @@
 # SRO Knowledge Editing Platform
 
-SROトリプルを学習したモデルでのROME知識編集とRipple Effect分析プラットフォーム
+SROトリプルを学習したモデルでの知識編集とRipple Effect分析プラットフォーム
 
 ## クイックスタート
 

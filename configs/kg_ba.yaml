@@ -1,0 +1,16 @@
+# Knowledge Graph Configuration - Barabási-Albert (Scale-Free)
+
+kg:
+  type: BA
+  num_entities: 200
+  num_relations: 50
+  m_attach: 3  # Number of edges to attach from new node (preferential attachment)
+  synonyms_per_entity: 5
+  synonyms_per_relation: 5
+
+corpus:
+  sample_rate_paraphrase: 0.20  # Use 20% of synonym combinations for training
+
+output_dir: data/kg/ba
+
+seed: 42

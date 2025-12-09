@@ -1,0 +1,25 @@
+# ROME Editing Configuration
+
+edit:
+  method: ROME
+  layers: [0, 1, 2]  # Early FFN layers (identified by causal tracing)
+  k_reg: 1.0  # Regularization strength
+
+causal_tracing:
+  noise_scale: 0.1
+  num_samples: 50  # Number of triples to use for layer identification
+
+evaluate:
+  local:
+    compute_rank: true
+    compute_logp: true
+    top_k: 10
+
+  global:
+    compute_I: true  # Impact metric
+    hop_ripple: [0, 1, 2]  # Analyze ripple effects by hop distance
+    degree_correlation: pearson  # pearson or spearman
+
+output_dir: outputs/edits
+
+seed: 42

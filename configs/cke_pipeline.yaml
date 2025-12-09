@@ -1,0 +1,44 @@
+# Continuous Knowledge Editing (CKE) Pipeline Configuration
+
+edit:
+  method: ROME
+  layers: [0, 1, 2]
+  k_reg: 1.0
+
+cke:
+  num_scenarios_per_condition: 10
+  steps_per_scenario: 5
+
+  conditions:
+    - name: "shared_fixed"
+      relation_split: "shared"
+      order: "fixed"
+
+    - name: "exclusive_fixed"
+      relation_split: "exclusive"
+      order: "fixed"
+
+    - name: "mixed_fixed"
+      relation_split: "mixed"
+      order: "fixed"
+
+    - name: "mixed_shuffle"
+      relation_split: "mixed"
+      order: "shuffle"
+
+evaluate:
+  retention: true
+  overwrite: true
+  plasticity: true
+  stability: true
+  ripple: true
+
+visualize:
+  rank_histogram: true
+  step_progression: true
+  heatmap: true
+  order_effect: true
+
+output_dir: outputs/cke
+
+seed: 42

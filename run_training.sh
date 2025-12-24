@@ -8,7 +8,7 @@ echo "GPT Model Training"
 echo "========================================"
 
 # Default parameters
-CONFIG="configs/train_gpt_small.yaml"
+CONFIG="configs/train_gpt_small_no_alias.yaml"
 OUTPUT_DIR=""
 
 # Parse command line arguments

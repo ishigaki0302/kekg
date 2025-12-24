@@ -162,6 +162,8 @@ def main():
                         help="Output directory for results")
     parser.add_argument("--layer", type=int, default=None,
                         help="Layer to edit (if None, auto-locate)")
+    parser.add_argument("--v-num-grad-steps", type=int, default=5,
+                        help="Number of gradient steps for ROME right vector optimization (default: 5)")
     parser.add_argument("--analyze-ripple", action="store_true",
                         help="Analyze ripple effects on entire knowledge graph")
     parser.add_argument("--max-ripple-triples", type=int, default=None,
@@ -183,6 +185,7 @@ def main():
     logger.info(f"Target: {args.target}")
     if args.original:
         logger.info(f"Original: {args.original}")
+    logger.info(f"ROME v_num_grad_steps: {args.v_num_grad_steps}")
     logger.info(f"Output directory: {output_dir}")
 
     # Load model
@@ -218,8 +221,8 @@ def main():
         device=device,
         kg_corpus_path=args.kg_corpus,
         mom2_n_samples=1000,
-        use_mom2_adjustment=False,  # Disable for now due to compatibility issues
-        v_num_grad_steps=100  # Increase optimization steps
+        use_mom2_adjustment=True,  # Use KG corpus statistics for editing
+        v_num_grad_steps=args.v_num_grad_steps
     )
 
     # Check original prediction if not provided

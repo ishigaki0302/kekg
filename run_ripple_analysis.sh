@@ -1,19 +1,22 @@
 #!/bin/bash
 # Ripple Effect Analysis Script
 # Performs N single edits with ripple analysis and creates visualizations
-# Usage: ./run_ripple_analysis.sh [num_experiments]
+# Usage: ./run_ripple_analysis.sh [num_experiments] [v_num_grad_steps]
 #   num_experiments: Number of editing experiments to run (default: 10)
+#   v_num_grad_steps: Number of gradient steps for ROME optimization (default: 5)
 
 set -e
 
 # Parse command-line arguments
 NUM_EXPERIMENTS=${1:-10}
+V_NUM_GRAD_STEPS=${2:-5}
 TOKENIZER_PATH="outputs/models/gpt_small/tokenizer.json"
 
 echo "======================================================================"
 echo "Ripple Effect Analysis Pipeline"
 echo "======================================================================"
 echo "Number of experiments: $NUM_EXPERIMENTS"
+echo "ROME v_num_grad_steps: $V_NUM_GRAD_STEPS"
 echo "Tokenizer: $TOKENIZER_PATH"
 echo ""
 
@@ -173,6 +176,7 @@ for ((i=1; i<=NUM_EXPERIMENTS; i++)); do
         --relation "$RELATION" \
         --target "$TARGET" \
         --layer 0 \
+        --v-num-grad-steps "$V_NUM_GRAD_STEPS" \
         --output-dir "outputs/ripple_exp_$i" \
         --analyze-ripple \
         --max-ripple-triples 1000 \
@@ -197,6 +201,10 @@ echo ""
 echo "======================================================================"
 echo "Analysis Complete!"
 echo "======================================================================"
+echo ""
+echo "Configuration:"
+echo "  - Experiments: $NUM_EXPERIMENTS"
+echo "  - v_num_grad_steps: $V_NUM_GRAD_STEPS"
 echo ""
 echo "Results:"
 echo "  - Test cases:    outputs/ripple_test_cases.json"

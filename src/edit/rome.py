@@ -67,6 +67,8 @@ class ModelConfigWrapper:
             self.n_embd = original_config.d_model
         if hasattr(original_config, "n_layers"):
             self.n_layer = original_config.n_layers
+        if hasattr(original_config, "max_seq_len"):
+            self.n_positions = original_config.max_seq_len
 
         # Add model name for ROME caching
         self._name_or_path = "gpt_mini"
@@ -230,7 +232,8 @@ class ROME:
             # Statistics
             "mom2_dataset": "custom",
             "mom2_n_samples": self.mom2_n_samples,
-            "mom2_dtype": "float32"
+            "mom2_dtype": "float32",
+            "kg_corpus_path": self.kg_corpus_path
         }
 
         return ROMEHyperParams(**hparams_dict)

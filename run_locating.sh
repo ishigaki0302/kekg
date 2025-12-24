@@ -8,10 +8,10 @@ echo "ROME Locating - Batch Causal Tracing"
 echo "========================================"
 
 # Default parameters
-MODEL_DIR="outputs/models/gpt_small"
-KG_FILE="data/kg/ba/graph.jsonl"
+MODEL_DIR="outputs/models/gpt_small_no_alias"
+KG_FILE="data/kg/ba_no_alias/graph.jsonl"
 NUM_SAMPLES=50
-OUTPUT_DIR="outputs/locating_results"
+OUTPUT_DIR="outputs/locating_results_no_alias"
 NOISE_LEVEL=3.0
 NUM_NOISE_SAMPLES=10
 SEED=42

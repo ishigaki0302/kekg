@@ -15,9 +15,25 @@ class TokenizerWrapper:
         self.sro_tokenizer = sro_tokenizer
         self.vocab_size = sro_tokenizer.vocab_size
 
-    def encode(self, text: str) -> List[int]:
-        """Encode text to token IDs."""
-        return self.sro_tokenizer.encode(text)
+    def encode(self, text: str, truncation: bool = False, max_length: Optional[int] = None) -> List[int]:
+        """
+        Encode text to token IDs.
+
+        Args:
+            text: Text to encode
+            truncation: Whether to truncate to max_length (ignored if max_length is None)
+            max_length: Maximum length to truncate to
+
+        Returns:
+            List of token IDs
+        """
+        token_ids = self.sro_tokenizer.encode(text)
+
+        # Apply truncation if requested and max_length is specified
+        if truncation and max_length is not None and len(token_ids) > max_length:
+            token_ids = token_ids[:max_length]
+
+        return token_ids
 
     def decode(self, token_ids: Union[List[int], torch.Tensor]) -> str:
         """Decode token IDs to text."""

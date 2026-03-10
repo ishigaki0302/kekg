@@ -5,7 +5,7 @@ the knowledge graph, affecting predictions for related facts.
 """
 
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Set
+from typing import Dict, List, Optional, Tuple, Set
 from pathlib import Path
 from collections import defaultdict, deque
 import json
@@ -37,7 +37,7 @@ class TripleLogits:
 
     # Ripple effect metrics
     ripple_effect: float  # Change in logit difference
-    hop_distance: int  # Graph distance from edited triple
+    hop_distance: Optional[int]  # Graph distance from edited triple; None if unreachable
     subject_degree: int
     object_degree: int
 
@@ -272,7 +272,7 @@ class RippleAnalyzer:
                     logit_o_alt_after=logit_alt_after,
                     pred_after=pred_after,
                     ripple_effect=ripple_effect,
-                    hop_distance=hop_dist if hop_dist != float('inf') else -1,
+                    hop_distance=hop_dist if hop_dist != float('inf') else None,
                     subject_degree=s_degree,
                     object_degree=o_degree
                 )
@@ -296,7 +296,7 @@ class RippleAnalyzer:
         by_degree = defaultdict(list)
 
         for result in results:
-            if result.hop_distance >= 0:  # Exclude unreachable
+            if result.hop_distance is not None:  # Exclude unreachable
                 by_hop[result.hop_distance].append(result.ripple_effect)
             by_degree[result.subject_degree].append(result.ripple_effect)
 

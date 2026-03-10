@@ -1,19 +1,14 @@
 #!/bin/bash
-# Run all tests
+# =============================================================================
+# Script   : tests/run_all_tests.sh
+# 概要     : 全テストを pytest で実行する
+# 使用方法 : ./tests/run_all_tests.sh
+# 前提条件 : pip install pytest
+# =============================================================================
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$SCRIPT_DIR"
 
 echo "=== Running SRO Platform Tests ==="
-echo ""
-
-echo "Test 1: Knowledge Graph Generation"
-python tests/test_kg_generation.py
-echo ""
-
-echo "Test 2: Tokenizer"
-python tests/test_tokenizer.py
-echo ""
-
-echo "Test 3: Model"
-python tests/test_model.py
-echo ""
-
-echo "=== All tests complete! ==="
+python -m pytest tests/ -v

@@ -1,5 +1,19 @@
 #!/bin/bash
-# Run Sequential Knowledge Editing with ROME
+# =============================================================================
+# Script   : run_sequential_edits.sh
+# Category : 知識編集 - 逐次編集
+# 概要     : ROME 知識編集を連続して N 回実行し，編集のたびに精度・Ripple を記録する
+#             編集順序の戦略（random / degree_high / degree_low / hop_high / hop_low）
+#             を選択できる
+# 出力先   : outputs/sequential_no_alias/
+#             (config.json, stats.jsonl, ripple_triples.jsonl, triple_acc.jsonl)
+# 使用方法 :
+#   ./run_sequential_edits.sh
+#   ./run_sequential_edits.sh --num-steps 200 --edit-selection-mode degree_high
+#   ./run_sequential_edits.sh --device cpu --seed 42
+# 次のステップ:
+#   ./run_sequential_analysis.sh --output-dir outputs/sequential_no_alias
+# =============================================================================
 
 set -e
 

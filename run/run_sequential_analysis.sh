@@ -1,5 +1,16 @@
 #!/bin/bash
-# Analyze and visualize sequential editing results
+# =============================================================================
+# Script   : run_sequential_analysis.sh
+# Category : 知識編集 - 逐次編集 結果分析
+# 概要     : run_sequential_edits.sh の出力結果（stats.jsonl 等）を読み込み，
+#             時系列プロット・ホップ距離ヒートマップ・次数分布等を可視化する
+# 出力先   : {output-dir}/
+#             (plots_time_series.png, plots_hop_degree_*.png, plots_failure_hist.png)
+# 使用方法 :
+#   ./run_sequential_analysis.sh
+#   ./run_sequential_analysis.sh --output-dir outputs/sequential_no_alias
+# 前提     : run_sequential_edits.sh を先に実行しておくこと
+# =============================================================================
 
 set -e
 

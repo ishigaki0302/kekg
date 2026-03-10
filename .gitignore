@@ -1,2 +1,6 @@
 /outputs/
 /data/
+/docs/
+__pycache__/
+*.pyc
+*.pyo

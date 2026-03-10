@@ -1,16 +1,26 @@
 #!/bin/bash
-# Ripple Effect Analysis Script
-# Performs N single edits with ripple analysis and creates visualizations
-# Usage: ./run_ripple_analysis.sh [num_experiments] [v_num_grad_steps]
-#   num_experiments: Number of editing experiments to run (default: 10)
-#   v_num_grad_steps: Number of gradient steps for ROME optimization (default: 5)
+# =============================================================================
+# Script   : run_ripple_analysis.sh
+# Category : 知識編集 - Ripple Effect 分析
+# 概要     : KGからランダムにN件のトリプルを選択して単発編集を実行し，
+#             各編集が他の知識に与えるリプル効果を分析・可視化する
+# 出力先   : outputs/ripple_exp_1/ ... outputs/ripple_exp_N/
+#             outputs/ripple_effects_analysis.png
+#             outputs/ripple_effects_stats.json
+# 使用方法 :
+#   ./run_ripple_analysis.sh [num_experiments] [v_num_grad_steps]
+#   ./run_ripple_analysis.sh 5 20
+# 引数     :
+#   $1 num_experiments  : 実験数 (デフォルト: 2)
+#   $2 v_num_grad_steps : ROME 勾配ステップ数 (デフォルト: 20)
+# =============================================================================
 
 set -e
 
 # Parse command-line arguments
-NUM_EXPERIMENTS=${1:-10}
-V_NUM_GRAD_STEPS=${2:-5}
-TOKENIZER_PATH="outputs/models/gpt_small/tokenizer.json"
+NUM_EXPERIMENTS=${1:-2}
+V_NUM_GRAD_STEPS=${2:-20}
+TOKENIZER_PATH="outputs/models/gpt_small_no_alias/tokenizer.json"
 
 echo "======================================================================"
 echo "Ripple Effect Analysis Pipeline"
@@ -76,7 +86,7 @@ print()
 # Load knowledge graph
 triples = []
 try:
-    with open('data/kg/ba/graph.jsonl', 'r') as f:
+    with open('data/kg/ba_no_alias/graph.jsonl', 'r') as f:
         for line in f:
             triples.append(json.loads(line))
     print(f'Loaded {len(triples)} triples from knowledge graph')
@@ -170,8 +180,8 @@ for ((i=1; i<=NUM_EXPERIMENTS; i++)); do
 
     # Run editing with ripple analysis
     PYTHONPATH=. python src/scripts/run_editing_single.py \
-        --model-dir outputs/models/gpt_small \
-        --kg-corpus data/kg/ba/corpus.base.txt \
+        --model-dir outputs/models/gpt_small_no_alias \
+        --kg-corpus data/kg/ba_no_alias/corpus.train.txt \
         --subject "$SUBJECT" \
         --relation "$RELATION" \
         --target "$TARGET" \
@@ -180,7 +190,8 @@ for ((i=1; i<=NUM_EXPERIMENTS; i++)); do
         --output-dir "outputs/ripple_exp_$i" \
         --analyze-ripple \
         --max-ripple-triples 1000 \
-        2>&1 | grep -E "INFO:|Success:|Ripple Effect Statistics:" || true
+        2>&1
+        #  | grep -E "INFO:|Success:|Ripple Effect Statistics:" || true
 
     echo "  ✓ Experiment $i completed"
     echo ""

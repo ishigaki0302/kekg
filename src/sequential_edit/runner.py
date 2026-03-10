@@ -213,60 +213,268 @@ def compute_pairwise_avg_hop(kg: KG, subjects: List[str], max_hop: int = 4) -> f
 
     return total_hop / count if count > 0 else 0.0
 
+# ========================================
+# 【subject の重複なし版】 - 一時的にコメントアウト
+# ========================================
+# def sample_edit_cases(
+#     kg: KG,
+#     num_cases: int,
+#     seed: int = 42,
+#     selection_mode: str = "random",
+#     max_hop: int = 4,
+# ) -> List[Dict[str, Any]]:
+#     """Sample edit cases from knowledge graph with various selection strategies.
+#
+#     Each edit case consists of:
+#     - Original triple (s, r, o_old)
+#     - New object (o_new) that is different from o_old
+#
+#     ※ 同じsubjectへの編集は1回までに制限されます
+#     ※ alias（__a1等）は使わない前提：すべて抽象エンティティ（例: E_184）
+#     """
+#     random.seed(seed)
+#     np.random.seed(seed)
+#
+#     all_triples = list(kg.triples)
+#     entities = sorted(set(kg.entities))  # すべて抽象エンティティのみの想定
+#
+#     # Build subject -> triples mapping
+#     subject_to_triples = defaultdict(list)
+#     for triple in all_triples:
+#         subject_to_triples[triple.s].append(triple)
+#
+#     # Get unique subjects with their degree
+#     unique_subjects = list(subject_to_triples.keys())
+#
+#     # Check if num_cases exceeds number of unique subjects
+#     if num_cases > len(unique_subjects):
+#         print(f"Warning: num_cases ({num_cases}) exceeds number of unique subjects ({len(unique_subjects)})")
+#         print(f"  Reducing num_cases to {len(unique_subjects)}")
+#         num_cases = len(unique_subjects)
+#
+#     # Select subjects based on selection mode
+#     if selection_mode == "random":
+#         selected_subjects = random.sample(unique_subjects, num_cases)
+#
+#     elif selection_mode == "degree_high":
+#         # Sort subjects by their degree (descending) and take top N
+#         # Use the degree from any triple with this subject (all should have same degree_s)
+#         subjects_with_degree = [(s, subject_to_triples[s][0].degree_s) for s in unique_subjects]
+#         subjects_with_degree.sort(key=lambda x: x[1], reverse=True)
+#         selected_subjects = [s for s, _ in subjects_with_degree[:num_cases]]
+#
+#     elif selection_mode == "degree_low":
+#         # Sort subjects by their degree (ascending) and take top N
+#         subjects_with_degree = [(s, subject_to_triples[s][0].degree_s) for s in unique_subjects]
+#         subjects_with_degree.sort(key=lambda x: x[1])
+#         selected_subjects = [s for s, _ in subjects_with_degree[:num_cases]]
+#
+#     elif selection_mode == "hop_high":
+#         print(f"Selecting {num_cases} subjects to maximize pairwise hop distance (greedy)...")
+#         selected_subjects = [random.choice(unique_subjects)]
+#         remaining_subjects = [s for s in unique_subjects if s != selected_subjects[0]]
+#
+#         # 各ノードから選択済みsubjectへの最小距離を記録
+#         min_dist_to_selected = kg.bfs_hop(selected_subjects[0], max_hop)
+#
+#         for i in range(1, num_cases):
+#             if i % 10 == 0:
+#                 print(f"  Progress: {i}/{num_cases}")
+#
+#             best_subject = None
+#             best_min_distance = -1
+#
+#             candidates = remaining_subjects if len(remaining_subjects) <= 500 else random.sample(remaining_subjects, 500)
+#
+#             for candidate_subject in candidates:
+#                 # 事前計算した距離マップから最小距離を取得（BFS不要）
+#                 min_distance = min_dist_to_selected.get(candidate_subject, max_hop + 1)
+#                 if min_distance > best_min_distance:
+#                     best_min_distance = min_distance
+#                     best_subject = candidate_subject
+#
+#             if best_subject:
+#                 selected_subjects.append(best_subject)
+#                 remaining_subjects = [s for s in remaining_subjects if s != best_subject]
+#
+#                 # 新しく選択されたsubjectからBFSして距離マップを更新
+#                 new_hop_dist = kg.bfs_hop(best_subject, max_hop)
+#                 for entity, dist in new_hop_dist.items():
+#                     if entity not in min_dist_to_selected:
+#                         min_dist_to_selected[entity] = dist
+#                     else:
+#                         min_dist_to_selected[entity] = min(min_dist_to_selected[entity], dist)
+#
+#         avg_pairwise_hop = compute_pairwise_avg_hop(kg, selected_subjects, max_hop)
+#         print(f"Selected {len(selected_subjects)} subjects with avg pairwise hop: {avg_pairwise_hop:.2f}")
+#
+#     elif selection_mode == "hop_low":
+#         print(f"Selecting {num_cases} subjects to minimize pairwise hop distance (greedy)...")
+#         selected_subjects = [random.choice(unique_subjects)]
+#         remaining_subjects = [s for s in unique_subjects if s != selected_subjects[0]]
+#
+#         # 各ノードから選択済みsubjectへの最小距離を記録
+#         min_dist_to_selected = kg.bfs_hop(selected_subjects[0], max_hop)
+#
+#         for i in range(1, num_cases):
+#             if i % 10 == 0:
+#                 print(f"  Progress: {i}/{num_cases}")
+#
+#             best_subject = None
+#             best_min_distance = max_hop + 2
+#
+#             candidates = remaining_subjects if len(remaining_subjects) <= 500 else random.sample(remaining_subjects, 500)
+#
+#             for candidate_subject in candidates:
+#                 # 事前計算した距離マップから最小距離を取得（BFS不要）
+#                 min_distance = min_dist_to_selected.get(candidate_subject, max_hop + 1)
+#                 if min_distance < best_min_distance:
+#                     best_min_distance = min_distance
+#                     best_subject = candidate_subject
+#
+#             if best_subject:
+#                 selected_subjects.append(best_subject)
+#                 remaining_subjects = [s for s in remaining_subjects if s != best_subject]
+#
+#                 # 新しく選択されたsubjectからBFSして距離マップを更新
+#                 new_hop_dist = kg.bfs_hop(best_subject, max_hop)
+#                 for entity, dist in new_hop_dist.items():
+#                     if entity not in min_dist_to_selected:
+#                         min_dist_to_selected[entity] = dist
+#                     else:
+#                         min_dist_to_selected[entity] = min(min_dist_to_selected[entity], dist)
+#
+#         avg_pairwise_hop = compute_pairwise_avg_hop(kg, selected_subjects, max_hop)
+#         print(f"Selected {len(selected_subjects)} subjects with avg pairwise hop: {avg_pairwise_hop:.2f}")
+#
+#     else:
+#         raise ValueError(f"Unknown selection mode: {selection_mode}")
+#
+#     # For each selected subject, randomly pick one triple with high/low degree preference
+#     sampled_triples = []
+#     for subject in selected_subjects:
+#         triples_for_subject = subject_to_triples[subject]
+#
+#         # Randomly select one triple from this subject
+#         selected_triple = random.choice(triples_for_subject)
+#         sampled_triples.append(selected_triple)
+#
+#     # Build edit cases
+#     edit_cases: List[Dict[str, Any]] = []
+#
+#     # Build a set of existing (s, r, o) tuples for fast lookup
+#     existing_triples_set = {(t.s, t.r, t.o) for t in all_triples}
+#
+#     for triple in sampled_triples:
+#         o_old = triple.o
+#
+#         # Filter out objects that would create existing triples or match o_old
+#         # (s, r, o_new) should not exist in KG
+#         possible_new_objects = [
+#             e for e in entities
+#             if e != o_old and (triple.s, triple.r, e) not in existing_triples_set
+#         ]
+#
+#         if not possible_new_objects:
+#             # Skip this triple if no valid new object exists
+#             print(f"  Warning: Skipping triple ({triple.s}, {triple.r}, {o_old}) - no valid o_new available")
+#             continue
+#
+#         o_new = random.choice(possible_new_objects)
+#
+#         edit_cases.append(
+#             {
+#                 "s": triple.s,
+#                 "r": triple.r,
+#                 "o_old": o_old,          # aliasなし前提（KGに入ってる文字列そのまま）
+#                 "o_new": o_new,          # aliasなし前提
+#                 "degree_s": triple.degree_s,
+#             }
+#         )
+#
+#     return edit_cases
+# ========================================
+# 【subject の重複あり版】 - 復活
+# ========================================
 def sample_edit_cases(
-    kg: KG,
-    num_cases: int,
-    seed: int = 42,
-    selection_mode: str = "random",
-    max_hop: int = 4,
+    kg: KG, num_cases: int, seed: int = 42, selection_mode: str = "random", max_hop: int = 4
 ) -> List[Dict[str, Any]]:
     """Sample edit cases from knowledge graph with various selection strategies.
 
     Each edit case consists of:
-    - Original triple (s, r, o_old)
-    - New object (o_new) that is different from o_old
+    - Original triple (s, r, o)
+    - New object (o_new) that is different from o (at abstract-entity level)
 
-    ※ alias（__a1等）は使わない前提：すべて抽象エンティティ（例: E_184）
+    o_new は alias 付きではなく，抽象エンティティ（例: E_184）のみを使う
+
+    Args:
+        kg: Knowledge graph
+        num_cases: Number of edit cases to sample
+        seed: Random seed
+        selection_mode: How to select edit cases:
+            - "random": Random sampling
+            - "degree_high": Subjects with high average degree
+            - "degree_low": Subjects with low average degree
+            - "hop_high": Maximize average pairwise hop distance among edit subjects
+            - "hop_low": Minimize average pairwise hop distance among edit subjects
+        max_hop: Maximum hop distance for computing pairwise hop (used in hop_high/hop_low modes)
     """
     random.seed(seed)
     np.random.seed(seed)
 
+    def to_abstract(ent: str) -> str:
+        # "E_184__a1" -> "E_184"
+        return ent.split("__")[0] if "__" in ent else ent
+
+    # Get all triples as candidates
     all_triples = list(kg.triples)
-    entities = sorted(set(kg.entities))  # すべて抽象エンティティのみの想定
+
+    # KG 内の全エンティティから「抽象エンティティ集合」を作る
+    # 例: {"E_001__a4", "E_001__a5", "E_184__a1"} -> {"E_001", "E_184"}
+    abstract_entities = sorted({to_abstract(e) for e in kg.entities})
 
     # Select triples based on selection mode
     if selection_mode == "random":
+        # Random sampling
         sampled_triples = random.sample(all_triples, min(num_cases, len(all_triples)))
 
     elif selection_mode == "degree_high":
+        # Sort by subject degree (descending) and take top N
         sorted_triples = sorted(all_triples, key=lambda t: t.degree_s, reverse=True)
         sampled_triples = sorted_triples[:num_cases]
 
     elif selection_mode == "degree_low":
+        # Sort by subject degree (ascending) and take top N
         sorted_triples = sorted(all_triples, key=lambda t: t.degree_s)
         sampled_triples = sorted_triples[:num_cases]
 
     elif selection_mode == "hop_high":
+        # Greedy selection to maximize pairwise hop distance among edit subjects
         print(f"Selecting {num_cases} triples to maximize pairwise hop distance (greedy)...")
+
+        # Start with a random triple
         selected = [random.choice(all_triples)]
         remaining = [t for t in all_triples if t.tid != selected[0].tid]
 
-        # 各ノードから選択済みsubjectへの最小距離を記録
-        # min_dist_to_selected[entity] = 選択済みsubjectへの最小距離
+        # Initialize distance map from the first selected subject
         min_dist_to_selected = kg.bfs_hop(selected[0].s, max_hop)
 
         for i in range(1, num_cases):
             if i % 10 == 0:
                 print(f"  Progress: {i}/{num_cases}")
 
+            # Find the triple whose subject is farthest from already selected subjects
             best_triple = None
             best_min_distance = -1
 
+            # Sample candidates for efficiency (if too many remaining)
             candidates = remaining if len(remaining) <= 500 else random.sample(remaining, 500)
 
             for candidate in candidates:
-                # 事前計算した距離マップから最小距離を取得（BFS不要）
+                # Look up minimum distance from distance map (no BFS needed!)
                 min_distance = min_dist_to_selected.get(candidate.s, max_hop + 1)
+
+                # Choose candidate with maximum min_distance (farthest from all selected)
                 if min_distance > best_min_distance:
                     best_min_distance = min_distance
                     best_triple = candidate
@@ -275,39 +483,44 @@ def sample_edit_cases(
                 selected.append(best_triple)
                 remaining = [t for t in remaining if t.tid != best_triple.tid]
 
-                # 新しく選択されたsubjectからBFSして距離マップを更新
+                # Update distance map with distances from the newly selected subject
                 new_hop_dist = kg.bfs_hop(best_triple.s, max_hop)
                 for entity, dist in new_hop_dist.items():
-                    if entity not in min_dist_to_selected:
-                        min_dist_to_selected[entity] = dist
-                    else:
-                        min_dist_to_selected[entity] = min(min_dist_to_selected[entity], dist)
+                    min_dist_to_selected[entity] = min(
+                        min_dist_to_selected.get(entity, max_hop + 1), dist
+                    )
 
         sampled_triples = selected
         avg_pairwise_hop = compute_pairwise_avg_hop(kg, [t.s for t in sampled_triples], max_hop)
         print(f"Selected {len(sampled_triples)} triples with avg pairwise hop: {avg_pairwise_hop:.2f}")
 
     elif selection_mode == "hop_low":
+        # Greedy selection to minimize pairwise hop distance among edit subjects
         print(f"Selecting {num_cases} triples to minimize pairwise hop distance (greedy)...")
+
+        # Start with a random triple
         selected = [random.choice(all_triples)]
         remaining = [t for t in all_triples if t.tid != selected[0].tid]
 
-        # 各ノードから選択済みsubjectへの最小距離を記録
-        # min_dist_to_selected[entity] = 選択済みsubjectへの最小距離
+        # Initialize distance map from the first selected subject
         min_dist_to_selected = kg.bfs_hop(selected[0].s, max_hop)
 
         for i in range(1, num_cases):
             if i % 10 == 0:
                 print(f"  Progress: {i}/{num_cases}")
 
+            # Find the triple whose subject is closest to already selected subjects
             best_triple = None
-            best_min_distance = max_hop + 2
+            best_min_distance = max_hop + 2  # Start with large value
 
+            # Sample candidates for efficiency (if too many remaining)
             candidates = remaining if len(remaining) <= 500 else random.sample(remaining, 500)
 
             for candidate in candidates:
-                # 事前計算した距離マップから最小距離を取得（BFS不要）
+                # Look up minimum distance from distance map (no BFS needed!)
                 min_distance = min_dist_to_selected.get(candidate.s, max_hop + 1)
+
+                # Choose candidate with minimum min_distance (closest to any selected)
                 if min_distance < best_min_distance:
                     best_min_distance = min_distance
                     best_triple = candidate
@@ -316,13 +529,12 @@ def sample_edit_cases(
                 selected.append(best_triple)
                 remaining = [t for t in remaining if t.tid != best_triple.tid]
 
-                # 新しく選択されたsubjectからBFSして距離マップを更新
+                # Update distance map with distances from the newly selected subject
                 new_hop_dist = kg.bfs_hop(best_triple.s, max_hop)
                 for entity, dist in new_hop_dist.items():
-                    if entity not in min_dist_to_selected:
-                        min_dist_to_selected[entity] = dist
-                    else:
-                        min_dist_to_selected[entity] = min(min_dist_to_selected[entity], dist)
+                    min_dist_to_selected[entity] = min(
+                        min_dist_to_selected.get(entity, max_hop + 1), dist
+                    )
 
         sampled_triples = selected
         avg_pairwise_hop = compute_pairwise_avg_hop(kg, [t.s for t in sampled_triples], max_hop)
@@ -331,194 +543,35 @@ def sample_edit_cases(
     else:
         raise ValueError(f"Unknown selection mode: {selection_mode}")
 
-    # Build edit cases
-    edit_cases: List[Dict[str, Any]] = []
+    edit_cases = []
     for triple in sampled_triples:
-        o_old = triple.o
+        o_old_abs = to_abstract(triple.o)
 
-        possible_new_objects = [e for e in entities if e != o_old]
+        # 元の o と「抽象レベル」で異なるものだけ候補にする
+        possible_new_objects = [
+            e_abs for e_abs in abstract_entities if e_abs != o_old_abs
+        ]
+
+        # 念のためガード
         if not possible_new_objects:
+            # 全部同じ抽象エンティティだった，などの変な状況
+            # とりあえずスキップするか，例外を投げる
+            # ここではスキップにしておく
             continue
 
-        o_new = random.choice(possible_new_objects)
+        # new_object は alias なしの抽象エンティティ
+        new_object = random.choice(possible_new_objects)
 
-        edit_cases.append(
-            {
-                "s": triple.s,
-                "r": triple.r,
-                "o_old": o_old,          # aliasなし前提（KGに入ってる文字列そのまま）
-                "o_new": o_new,          # aliasなし前提
-                "degree_s": triple.degree_s,
-            }
-        )
+        edit_case = {
+            "s": triple.s,
+            "r": triple.r,
+            "o_old": triple.o,      # ここは今まで通り alias 付き
+            "o_new": new_object,    # ★ alias なし抽象エンティティに変更
+            "degree_s": triple.degree_s,
+        }
+        edit_cases.append(edit_case)
 
     return edit_cases
-# def sample_edit_cases(
-#     kg: KG, num_cases: int, seed: int = 42, selection_mode: str = "random", max_hop: int = 4
-# ) -> List[Dict[str, Any]]:
-#     """Sample edit cases from knowledge graph with various selection strategies.
-
-#     Each edit case consists of:
-#     - Original triple (s, r, o)
-#     - New object (o_new) that is different from o (at abstract-entity level)
-
-#     o_new は alias 付きではなく，抽象エンティティ（例: E_184）のみを使う
-
-#     Args:
-#         kg: Knowledge graph
-#         num_cases: Number of edit cases to sample
-#         seed: Random seed
-#         selection_mode: How to select edit cases:
-#             - "random": Random sampling
-#             - "degree_high": Subjects with high average degree
-#             - "degree_low": Subjects with low average degree
-#             - "hop_high": Maximize average pairwise hop distance among edit subjects
-#             - "hop_low": Minimize average pairwise hop distance among edit subjects
-#         max_hop: Maximum hop distance for computing pairwise hop (used in hop_high/hop_low modes)
-#     """
-#     random.seed(seed)
-#     np.random.seed(seed)
-
-#     def to_abstract(ent: str) -> str:
-#         # "E_184__a1" -> "E_184"
-#         return ent.split("__")[0] if "__" in ent else ent
-
-#     # Get all triples as candidates
-#     all_triples = list(kg.triples)
-
-#     # KG 内の全エンティティから「抽象エンティティ集合」を作る
-#     # 例: {"E_001__a4", "E_001__a5", "E_184__a1"} -> {"E_001", "E_184"}
-#     abstract_entities = sorted({to_abstract(e) for e in kg.entities})
-
-#     # Select triples based on selection mode
-#     if selection_mode == "random":
-#         # Random sampling
-#         sampled_triples = random.sample(all_triples, min(num_cases, len(all_triples)))
-
-#     elif selection_mode == "degree_high":
-#         # Sort by subject degree (descending) and take top N
-#         sorted_triples = sorted(all_triples, key=lambda t: t.degree_s, reverse=True)
-#         sampled_triples = sorted_triples[:num_cases]
-
-#     elif selection_mode == "degree_low":
-#         # Sort by subject degree (ascending) and take top N
-#         sorted_triples = sorted(all_triples, key=lambda t: t.degree_s)
-#         sampled_triples = sorted_triples[:num_cases]
-
-#     elif selection_mode == "hop_high":
-#         # Greedy selection to maximize pairwise hop distance among edit subjects
-#         print(f"Selecting {num_cases} triples to maximize pairwise hop distance (greedy)...")
-
-#         # Start with a random triple
-#         selected = [random.choice(all_triples)]
-#         remaining = [t for t in all_triples if t.tid != selected[0].tid]
-
-#         for i in range(1, num_cases):
-#             if i % 10 == 0:
-#                 print(f"  Progress: {i}/{num_cases}")
-
-#             # Find the triple whose subject is farthest from already selected subjects
-#             selected_subjects = [t.s for t in selected]
-#             best_triple = None
-#             best_min_distance = -1
-
-#             # Sample candidates for efficiency (if too many remaining)
-#             candidates = remaining if len(remaining) <= 500 else random.sample(remaining, 500)
-
-#             for candidate in candidates:
-#                 # Compute minimum distance from this candidate to any selected subject
-#                 min_distance = max_hop + 1
-#                 for selected_subj in selected_subjects:
-#                     hop_dist = kg.bfs_hop(candidate.s, max_hop)
-#                     distance = hop_dist.get(selected_subj, max_hop + 1)
-#                     min_distance = min(min_distance, distance)
-
-#                 # Choose candidate with maximum min_distance (farthest from all selected)
-#                 if min_distance > best_min_distance:
-#                     best_min_distance = min_distance
-#                     best_triple = candidate
-
-#             if best_triple:
-#                 selected.append(best_triple)
-#                 remaining = [t for t in remaining if t.tid != best_triple.tid]
-
-#         sampled_triples = selected
-#         avg_pairwise_hop = compute_pairwise_avg_hop(kg, [t.s for t in sampled_triples], max_hop)
-#         print(f"Selected {len(sampled_triples)} triples with avg pairwise hop: {avg_pairwise_hop:.2f}")
-
-#     elif selection_mode == "hop_low":
-#         # Greedy selection to minimize pairwise hop distance among edit subjects
-#         print(f"Selecting {num_cases} triples to minimize pairwise hop distance (greedy)...")
-
-#         # Start with a random triple
-#         selected = [random.choice(all_triples)]
-#         remaining = [t for t in all_triples if t.tid != selected[0].tid]
-
-#         for i in range(1, num_cases):
-#             if i % 10 == 0:
-#                 print(f"  Progress: {i}/{num_cases}")
-
-#             # Find the triple whose subject is closest to already selected subjects
-#             selected_subjects = [t.s for t in selected]
-#             best_triple = None
-#             best_min_distance = max_hop + 2  # Start with large value
-
-#             # Sample candidates for efficiency (if too many remaining)
-#             candidates = remaining if len(remaining) <= 500 else random.sample(remaining, 500)
-
-#             for candidate in candidates:
-#                 # Compute minimum distance from this candidate to any selected subject
-#                 min_distance = max_hop + 1
-#                 for selected_subj in selected_subjects:
-#                     hop_dist = kg.bfs_hop(candidate.s, max_hop)
-#                     distance = hop_dist.get(selected_subj, max_hop + 1)
-#                     min_distance = min(min_distance, distance)
-
-#                 # Choose candidate with minimum min_distance (closest to any selected)
-#                 if min_distance < best_min_distance:
-#                     best_min_distance = min_distance
-#                     best_triple = candidate
-
-#             if best_triple:
-#                 selected.append(best_triple)
-#                 remaining = [t for t in remaining if t.tid != best_triple.tid]
-
-#         sampled_triples = selected
-#         avg_pairwise_hop = compute_pairwise_avg_hop(kg, [t.s for t in sampled_triples], max_hop)
-#         print(f"Selected {len(sampled_triples)} triples with avg pairwise hop: {avg_pairwise_hop:.2f}")
-
-#     else:
-#         raise ValueError(f"Unknown selection mode: {selection_mode}")
-
-#     edit_cases = []
-#     for triple in sampled_triples:
-#         o_old_abs = to_abstract(triple.o)
-
-#         # 元の o と「抽象レベル」で異なるものだけ候補にする
-#         possible_new_objects = [
-#             e_abs for e_abs in abstract_entities if e_abs != o_old_abs
-#         ]
-
-#         # 念のためガード
-#         if not possible_new_objects:
-#             # 全部同じ抽象エンティティだった，などの変な状況
-#             # とりあえずスキップするか，例外を投げる
-#             # ここではスキップにしておく
-#             continue
-
-#         # new_object は alias なしの抽象エンティティ
-#         new_object = random.choice(possible_new_objects)
-
-#         edit_case = {
-#             "s": triple.s,
-#             "r": triple.r,
-#             "o_old": triple.o,      # ここは今まで通り alias 付き
-#             "o_new": new_object,    # ★ alias なし抽象エンティティに変更
-#             "degree_s": triple.degree_s,
-#         }
-#         edit_cases.append(edit_case)
-
-#     return edit_cases
 
 
 def compute_step_metrics(

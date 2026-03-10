@@ -1,25 +1,36 @@
 #!/bin/bash
-# Run multiple trials of hop high/low experiments in parallel
-# This script runs N trials for both hop_high and hop_low with different random seeds
-# to account for the randomness in initial selection
+# =============================================================================
+# Script   : run_degree_exclusive_multi_trial.sh
+# Category : 知識編集 - 多試行比較実験（並列）
+# 概要     : degree_high / degree_low の排他的編集実験を異なるシードで N 試行ずつ
+#             並列実行し，信頼区間付きの多試行比較プロットを生成する
+#             各試行でランダムシードを変えてトリプル選択の揺らぎを吸収する
+# 出力先   : outputs/degree_exclusive_multi_trial_no_alias_2/
+#             degree_high/trial_0/ ... degree_low/trial_N/
+#             multi_trial_comparison.png, hop_distance_analysis_multi_trial.png
+# 使用方法 :
+#   ./run_degree_exclusive_multi_trial.sh
+#   ./run_degree_exclusive_multi_trial.sh --num-trials 10 --p-extreme 0.10
+# 参考     : 単発版は run_degree_high_low_exclusive.sh
+# =============================================================================
 
 set -e
 
 echo "========================================"
-echo "Sequential Editing - Hop Multi-Trial Analysis"
+echo "Sequential Editing - Degree Exclusive Multi-Trial Analysis"
 echo "========================================"
 echo ""
 
 # Default parameters
 MODEL_DIR="outputs/models/gpt_small_no_alias"
 KG_DIR="data/kg/ba_no_alias"
-BASE_OUTPUT_DIR="outputs/hop_multi_trial_no_alias"
-NUM_STEPS="1000"
+BASE_OUTPUT_DIR="outputs/degree_exclusive_multi_trial_no_alias_2"
 NUM_TRIALS="10"  # Number of trials for each mode
 NUM_RETAIN_TRIPLES="1000"
 MAX_HOP="10"
 LAYER="0"
 V_NUM_GRAD_STEPS="20"
+P_EXTREME="0.10"  # Percentile threshold for extreme pool (num_steps = pool_size determined by p_extreme)
 BASE_SEED="24"
 DEVICE="cuda"
 
@@ -36,10 +47,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --base-output-dir)
             BASE_OUTPUT_DIR="$2"
-            shift 2
-            ;;
-        --num-steps)
-            NUM_STEPS="$2"
             shift 2
             ;;
         --num-trials)
@@ -62,6 +69,10 @@ while [[ $# -gt 0 ]]; do
             V_NUM_GRAD_STEPS="$2"
             shift 2
             ;;
+        --p-extreme)
+            P_EXTREME="$2"
+            shift 2
+            ;;
         --base-seed)
             BASE_SEED="$2"
             shift 2
@@ -71,15 +82,16 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         --help|-h)
-            echo "Run multiple trials of hop high/low experiments"
+            echo "Run multiple trials of degree high/low exclusive experiments"
             echo ""
             echo "Usage: $0 [options]"
             echo ""
             echo "Options:"
             echo "  --model-dir <dir>           Path to trained model (default: outputs/models/gpt_small_no_alias)"
             echo "  --kg-dir <dir>              Path to knowledge graph data (default: data/kg/ba_no_alias)"
-            echo "  --base-output-dir <dir>     Base output directory (default: outputs/hop_multi_trial_no_alias)"
-            echo "  --num-steps <n>             Number of sequential edits (default: 1000)"
+            echo "  --base-output-dir <dir>     Base output directory (default: outputs/degree_exclusive_multi_trial_no_alias)"
+            echo "  --p-extreme <float>         Percentile threshold for extreme pool (default: 0.10)"
+            echo "                              This determines num_steps automatically: num_steps = pool_size"
             echo "  --num-trials <n>            Number of trials per mode (default: 10)"
             echo "  --num-retain-triples <n>    Number of unedited triples (default: 1000)"
             echo "  --max-hop <n>               Maximum hop distance (default: 10)"
@@ -89,10 +101,23 @@ while [[ $# -gt 0 ]]; do
             echo "  --device <device>           Device: cuda or cpu (default: cuda)"
             echo "  --help, -h                  Show this help message"
             echo ""
-            echo "This script runs NUM_TRIALS experiments for each mode (hop_high, hop_low)"
-            echo "with different random seeds to account for initial selection randomness."
+            echo "This script runs NUM_TRIALS experiments for each mode (degree_high, degree_low)"
+            echo "with different random seeds to account for randomness in relation selection."
+            echo ""
+            echo "For each trial, subjects are exclusively partitioned (no overlap between high/low),"
+            echo "but the random seed varies which specific relations (triples) are selected for editing."
             echo ""
             echo "Total experiments: NUM_TRIALS * 2 (high and low)"
+            echo ""
+            echo "How p-extreme works:"
+            echo "  p-extreme defines the pool size: pool_size = ceil(p-extreme × total_subjects)"
+            echo "  num_steps is automatically set to pool_size (use entire pool)"
+            echo "  Example: If total_subjects=1000 and p-extreme=0.10:"
+            echo "           → pool_size ≈ 100"
+            echo "           → num_steps = 100 (edits all subjects in the pool)"
+            echo "  To run more/fewer edits, adjust p-extreme:"
+            echo "    - p-extreme=0.05 → ~50 edits (top/bottom 5%)"
+            echo "    - p-extreme=0.20 → ~200 edits (top/bottom 20%)"
             echo ""
             echo "Visualization will show:"
             echo "  - Individual trial lines (thin, semi-transparent)"
@@ -113,7 +138,7 @@ echo "Configuration:"
 echo "  Model directory: $MODEL_DIR"
 echo "  KG directory: $KG_DIR"
 echo "  Base output directory: $BASE_OUTPUT_DIR"
-echo "  Number of steps: $NUM_STEPS"
+echo "  P-extreme: $P_EXTREME (num_steps will be auto-set to pool size)"
 echo "  Number of trials per mode: $NUM_TRIALS"
 echo "  Retain triples: $NUM_RETAIN_TRIPLES"
 echo "  Max hop distance: $MAX_HOP"
@@ -142,8 +167,8 @@ mkdir -p "$BASE_OUTPUT_DIR"
 TOTAL_EXPERIMENTS=$((NUM_TRIALS * 2))
 echo "========================================"
 echo "Starting $TOTAL_EXPERIMENTS experiments in parallel..."
-echo "  hop_high: $NUM_TRIALS trials"
-echo "  hop_low:  $NUM_TRIALS trials"
+echo "  degree_high: $NUM_TRIALS trials"
+echo "  degree_low:  $NUM_TRIALS trials"
 echo "========================================"
 echo ""
 
@@ -156,25 +181,25 @@ run_trial() {
 
     # Assign GPU: even trials to cuda:0, odd trials to cuda:1
     local GPU_ID=$((TRIAL_ID % 2))
+    local ASSIGNED_DEVICE="cuda:${GPU_ID}"
 
-    echo "[${MODE}_trial_${TRIAL_ID}] Starting experiment (seed=$TRIAL_SEED, GPU: cuda:${GPU_ID})..."
+    echo "[${MODE}_trial_${TRIAL_ID}] Starting experiment (seed=$TRIAL_SEED, GPU: ${ASSIGNED_DEVICE})..."
 
     # Create output directory
     mkdir -p "$OUTPUT_DIR"
 
-    CUDA_VISIBLE_DEVICES=$GPU_ID python -m src.scripts.run_sequential_edits \
+    python -m src.scripts.run_degree_exclusive_edits \
         --model-dir "$MODEL_DIR" \
         --kg-dir "$KG_DIR" \
         --output-dir "$OUTPUT_DIR" \
-        --num-steps "$NUM_STEPS" \
+        --selection-mode "$MODE" \
+        --p-extreme "$P_EXTREME" \
         --num-retain-triples "$NUM_RETAIN_TRIPLES" \
-        --eval-mode "sample" \
-        --edit-selection-mode "$MODE" \
         --max-hop "$MAX_HOP" \
         --layer "$LAYER" \
         --v-num-grad-steps "$V_NUM_GRAD_STEPS" \
         --seed "$TRIAL_SEED" \
-        --device "$DEVICE" \
+        --device "$ASSIGNED_DEVICE" \
         > "${OUTPUT_DIR}/run.log" 2>&1
 
     local EXIT_CODE=$?
@@ -202,7 +227,7 @@ run_trial() {
 
 # Export function and variables for parallel execution
 export -f run_trial
-export MODEL_DIR KG_DIR BASE_OUTPUT_DIR NUM_STEPS NUM_RETAIN_TRIPLES MAX_HOP LAYER V_NUM_GRAD_STEPS BASE_SEED DEVICE
+export MODEL_DIR KG_DIR BASE_OUTPUT_DIR NUM_RETAIN_TRIPLES MAX_HOP LAYER V_NUM_GRAD_STEPS P_EXTREME BASE_SEED DEVICE
 
 # Launch all trials in parallel
 echo "Launching parallel experiments..."
@@ -211,27 +236,27 @@ echo ""
 PIDS=()
 EXIT_CODES_ARRAY=()
 
-# Launch hop_high trials
+# Launch degree_high trials
 for ((TRIAL_ID=0; TRIAL_ID<NUM_TRIALS; TRIAL_ID++)); do
-    run_trial "hop_high" "$TRIAL_ID" &
+    run_trial "degree_high" "$TRIAL_ID" &
     PID=$!
     PIDS+=($PID)
-    echo "  [hop_high_trial_${TRIAL_ID}] PID: $PID"
+    echo "  [degree_high_trial_${TRIAL_ID}] PID: $PID"
 done
 
-# Launch hop_low trials
+# Launch degree_low trials
 for ((TRIAL_ID=0; TRIAL_ID<NUM_TRIALS; TRIAL_ID++)); do
-    run_trial "hop_low" "$TRIAL_ID" &
+    run_trial "degree_low" "$TRIAL_ID" &
     PID=$!
     PIDS+=($PID)
-    echo "  [hop_low_trial_${TRIAL_ID}]  PID: $PID"
+    echo "  [degree_low_trial_${TRIAL_ID}]  PID: $PID"
 done
 
 echo ""
 echo "All experiments launched. Waiting for completion..."
 echo "You can monitor progress in real-time:"
-echo "  tail -f $BASE_OUTPUT_DIR/hop_high/trial_0/run.log"
-echo "  tail -f $BASE_OUTPUT_DIR/hop_low/trial_0/run.log"
+echo "  tail -f $BASE_OUTPUT_DIR/degree_high/trial_0/run.log"
+echo "  tail -f $BASE_OUTPUT_DIR/degree_low/trial_0/run.log"
 echo ""
 
 # Wait for all background jobs
@@ -254,10 +279,10 @@ SUCCESS_COUNT_HIGH=0
 for ((TRIAL_ID=0; TRIAL_ID<NUM_TRIALS; TRIAL_ID++)); do
     IDX=$TRIAL_ID
     if [ ${EXIT_CODES_ARRAY[$IDX]} -eq 0 ]; then
-        echo "  [hop_high_trial_${TRIAL_ID}] ✓ SUCCESS"
+        echo "  [degree_high_trial_${TRIAL_ID}] ✓ SUCCESS"
         SUCCESS_COUNT_HIGH=$((SUCCESS_COUNT_HIGH + 1))
     else
-        echo "  [hop_high_trial_${TRIAL_ID}] ✗ FAILED"
+        echo "  [degree_high_trial_${TRIAL_ID}] ✗ FAILED"
     fi
 done
 
@@ -265,17 +290,17 @@ SUCCESS_COUNT_LOW=0
 for ((TRIAL_ID=0; TRIAL_ID<NUM_TRIALS; TRIAL_ID++)); do
     IDX=$((NUM_TRIALS + TRIAL_ID))
     if [ ${EXIT_CODES_ARRAY[$IDX]} -eq 0 ]; then
-        echo "  [hop_low_trial_${TRIAL_ID}]  ✓ SUCCESS"
+        echo "  [degree_low_trial_${TRIAL_ID}]  ✓ SUCCESS"
         SUCCESS_COUNT_LOW=$((SUCCESS_COUNT_LOW + 1))
     else
-        echo "  [hop_low_trial_${TRIAL_ID}]  ✗ FAILED"
+        echo "  [degree_low_trial_${TRIAL_ID}]  ✗ FAILED"
     fi
 done
 
 echo ""
 echo "Success rates:"
-echo "  hop_high: $SUCCESS_COUNT_HIGH / $NUM_TRIALS"
-echo "  hop_low:  $SUCCESS_COUNT_LOW / $NUM_TRIALS"
+echo "  degree_high: $SUCCESS_COUNT_HIGH / $NUM_TRIALS"
+echo "  degree_low:  $SUCCESS_COUNT_LOW / $NUM_TRIALS"
 echo ""
 
 # Generate multi-trial comparison plot if at least 2 trials succeeded for each mode
@@ -285,7 +310,7 @@ if [ $SUCCESS_COUNT_HIGH -ge 2 ] && [ $SUCCESS_COUNT_LOW -ge 2 ]; then
     echo "========================================"
     echo ""
 
-    python -m src.scripts.compare_hop_multi_trial \
+    python -m src.scripts.compare_degree_exclusive_multi_trial \
         --base-dir "$BASE_OUTPUT_DIR" \
         --num-trials "$NUM_TRIALS"
 
@@ -296,6 +321,26 @@ if [ $SUCCESS_COUNT_HIGH -ge 2 ] && [ $SUCCESS_COUNT_LOW -ge 2 ]; then
         echo ""
         echo "⚠ Failed to generate multi-trial comparison plot"
     fi
+
+    # Generate hop distance analysis
+    echo ""
+    echo "========================================"
+    echo "Generating hop distance analysis..."
+    echo "========================================"
+    echo ""
+
+    python -m src.scripts.analyze_hop_distance_effects \
+        --base-dir "$BASE_OUTPUT_DIR" \
+        --num-trials "$NUM_TRIALS" \
+        --output-dir "$BASE_OUTPUT_DIR"
+
+    if [ $? -eq 0 ]; then
+        echo ""
+        echo "✓ Hop distance analysis generated successfully!"
+    else
+        echo ""
+        echo "⚠ Failed to generate hop distance analysis"
+    fi
 else
     echo "⚠ Skipping multi-trial comparison plot"
     echo "  (need at least 2 successful trials for each mode)"
@@ -305,13 +350,14 @@ echo ""
 echo "Results directory: $BASE_OUTPUT_DIR"
 echo ""
 echo "Generated outputs:"
-echo "  - ${BASE_OUTPUT_DIR}/hop_high/trial_0/"
-echo "  - ${BASE_OUTPUT_DIR}/hop_high/trial_1/"
+echo "  - ${BASE_OUTPUT_DIR}/degree_high/trial_0/"
+echo "  - ${BASE_OUTPUT_DIR}/degree_high/trial_1/"
 echo "  - ..."
-echo "  - ${BASE_OUTPUT_DIR}/hop_low/trial_0/"
-echo "  - ${BASE_OUTPUT_DIR}/hop_low/trial_1/"
+echo "  - ${BASE_OUTPUT_DIR}/degree_low/trial_0/"
+echo "  - ${BASE_OUTPUT_DIR}/degree_low/trial_1/"
 echo "  - ..."
-echo "  - ${BASE_OUTPUT_DIR}/multi_trial_comparison.png  ← 多試行比較プロット"
+echo "  - ${BASE_OUTPUT_DIR}/multi_trial_comparison.png           ← 多試行比較プロット"
+echo "  - ${BASE_OUTPUT_DIR}/hop_distance_analysis_multi_trial.png ← Hop距離別分析"
 echo ""
 
 # Check if all succeeded

@@ -5,7 +5,7 @@
 # 概要     : 全トリプルを次数順（高→低）でソートし，NUM_STEPS ずつのビンに分割して
 #             各ビンの逐次編集実験を並列実行する
 #             次数帯ごとの編集難易度・Ripple 傾向を比較分析するために使う
-# 出力先   : outputs/degree_binned_no_alias/
+# 出力先   : outputs/degree_binned/
 #             bin_0/ bin_1/ ... / degree_bins_comparison.png
 # 使用方法 :
 #   ./run_degree_binned_analysis.sh
@@ -20,9 +20,9 @@ echo "========================================"
 echo ""
 
 # Default parameters
-MODEL_DIR="outputs/models/gpt_small_no_alias"
-KG_DIR="data/kg/ba_no_alias"
-BASE_OUTPUT_DIR="outputs/degree_binned_no_alias"
+MODEL_DIR="outputs/models/gpt_small"
+KG_DIR="data/kg/ba"
+BASE_OUTPUT_DIR="outputs/degree_binned"
 NUM_STEPS="1000"
 NUM_RETAIN_TRIPLES="1000"
 MAX_HOP="10"
@@ -85,9 +85,9 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [options]"
             echo ""
             echo "Options:"
-            echo "  --model-dir <dir>           Path to trained model (default: outputs/models/gpt_small_no_alias)"
-            echo "  --kg-dir <dir>              Path to knowledge graph data (default: data/kg/ba_no_alias)"
-            echo "  --base-output-dir <dir>     Base output directory (default: outputs/degree_binned_no_alias)"
+            echo "  --model-dir <dir>           Path to trained model (default: outputs/models/gpt_small)"
+            echo "  --kg-dir <dir>              Path to knowledge graph data (default: data/kg/ba)"
+            echo "  --base-output-dir <dir>     Base output directory (default: outputs/degree_binned)"
             echo "  --num-steps <n>             Number of edits per bin (default: 1000)"
             echo "  --num-retain-triples <n>    Number of unedited triples (default: 1000)"
             echo "  --max-hop <n>               Maximum hop distance (default: 10)"

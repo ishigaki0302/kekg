@@ -3,11 +3,11 @@
 # Script   : run_training.sh
 # Category : 学習
 # 概要     : GPTMini モデルを SROコーパスで学習する
-# 出力先   : outputs/models/gpt_small_no_alias/
+# 出力先   : outputs/models/gpt_small/
 #             (model.pt, tokenizer.json, metrics.json, train.log 等)
 # 使用方法 :
 #   ./run_training.sh
-#   ./run_training.sh --config configs/train_gpt_small_no_alias.yaml
+#   ./run_training.sh --config configs/train_gpt_small.yaml
 #   ./run_training.sh --output-dir outputs/models/my_model
 # =============================================================================
 
@@ -18,7 +18,7 @@ echo "GPT Model Training"
 echo "========================================"
 
 # Default parameters
-CONFIG="configs/train_gpt_small_no_alias.yaml"
+CONFIG="configs/train_gpt_small.yaml"
 OUTPUT_DIR=""
 
 # Parse command line arguments

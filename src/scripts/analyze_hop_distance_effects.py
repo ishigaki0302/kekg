@@ -6,15 +6,15 @@ how retain accuracy varies by hop distance from edited subjects.
 Usage:
     # Single trial analysis
     python -m src.scripts.analyze_hop_distance_effects \
-        --high-dir outputs/degree_exclusive_multi_trial_no_alias/degree_high/trial_0 \
-        --low-dir outputs/degree_exclusive_multi_trial_no_alias/degree_low/trial_0 \
-        --output-dir outputs/degree_exclusive_multi_trial_no_alias
+        --high-dir outputs/degree_exclusive_multi_trial/degree_high/trial_0 \
+        --low-dir outputs/degree_exclusive_multi_trial/degree_low/trial_0 \
+        --output-dir outputs/degree_exclusive_multi_trial
 
     # Multi-trial analysis
     python -m src.scripts.analyze_hop_distance_effects \
-        --base-dir outputs/degree_exclusive_multi_trial_no_alias \
+        --base-dir outputs/degree_exclusive_multi_trial \
         --num-trials 10 \
-        --output-dir outputs/degree_exclusive_multi_trial_no_alias
+        --output-dir outputs/degree_exclusive_multi_trial
 """
 
 import argparse

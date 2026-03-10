@@ -8,12 +8,12 @@ and generates comparison plots showing:
 
 Usage:
     python -m src.scripts.compare_subject_repetition_multi_trial \
-        --base-dir outputs/subject_rep_multi_trial_no_alias \
+        --base-dir outputs/subject_rep_multi_trial \
         --num-trials 10
 
 Optional (cut x-axis by step):
     python -m src.scripts.compare_subject_repetition_multi_trial \
-        --base-dir outputs/subject_rep_multi_trial_no_alias \
+        --base-dir outputs/subject_rep_multi_trial \
         --num-trials 10 \
         --max-step 20
 """

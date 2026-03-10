@@ -13,8 +13,8 @@ Key features:
 
 Usage:
     python -m src.scripts.run_degree_exclusive_edits \
-        --model-dir outputs/models/gpt_small_no_alias \
-        --kg-dir data/kg/ba_no_alias \
+        --model-dir outputs/models/gpt_small \
+        --kg-dir data/kg/ba \
         --output-dir outputs/degree_exclusive/degree_high \
         --num-steps 1000 \
         --selection-mode degree_high \

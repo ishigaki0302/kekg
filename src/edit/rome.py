@@ -71,7 +71,7 @@ class ModelConfigWrapper:
             self.n_positions = original_config.max_seq_len
 
         # Add model name for ROME caching
-        self._name_or_path = "gpt_mini_no_alias"
+        self._name_or_path = "gpt_mini"
 
 
 class ModelWrapper(nn.Module):

@@ -20,7 +20,7 @@ set -e
 # Parse command-line arguments
 NUM_EXPERIMENTS=${1:-2}
 V_NUM_GRAD_STEPS=${2:-20}
-TOKENIZER_PATH="outputs/models/gpt_small_no_alias/tokenizer.json"
+TOKENIZER_PATH="outputs/models/gpt_small/tokenizer.json"
 
 echo "======================================================================"
 echo "Ripple Effect Analysis Pipeline"
@@ -86,7 +86,7 @@ print()
 # Load knowledge graph
 triples = []
 try:
-    with open('data/kg/ba_no_alias/graph.jsonl', 'r') as f:
+    with open('data/kg/ba/graph.jsonl', 'r') as f:
         for line in f:
             triples.append(json.loads(line))
     print(f'Loaded {len(triples)} triples from knowledge graph')
@@ -180,8 +180,8 @@ for ((i=1; i<=NUM_EXPERIMENTS; i++)); do
 
     # Run editing with ripple analysis
     PYTHONPATH=. python src/scripts/run_editing_single.py \
-        --model-dir outputs/models/gpt_small_no_alias \
-        --kg-corpus data/kg/ba_no_alias/corpus.train.txt \
+        --model-dir outputs/models/gpt_small \
+        --kg-corpus data/kg/ba/corpus.train.txt \
         --subject "$SUBJECT" \
         --relation "$RELATION" \
         --target "$TARGET" \

@@ -1,5 +1,16 @@
 #!/bin/bash
-# Run ROME Editing on a specific (s,r,o) triple
+# =============================================================================
+# Script   : run_editing.sh
+# Category : 知識編集 - 単発編集
+# 概要     : 指定した (Subject, Relation, Target) の1トリプルに対して
+#             ROME 知識編集を実行する（オプションで Ripple Effect 分析も可）
+# 出力先   : outputs/editing_results/
+#             (edit_result.json, locating_result.png, editing_result.png)
+# 使用方法 :
+#   ./run_editing.sh --subject E_0001 --relation R_022 --target E_0999
+#   ./run_editing.sh -s E_0001 -r R_022 -o E_0999 --layer 0 --analyze-ripple
+# 必須引数 : --subject (-s), --relation (-r), --target (-o)
+# =============================================================================
 
 set -e
 

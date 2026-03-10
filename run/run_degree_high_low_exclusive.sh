@@ -1,27 +1,37 @@
 #!/bin/bash
-# Run sequential editing experiments for degree-binned triples
-# This script divides all triples by degree (high to low) into bins of NUM_STEPS size
-# and runs editing experiments for each bin in parallel
+# =============================================================================
+# Script   : run_degree_high_low_exclusive.sh
+# Category : 知識編集 - 比較実験（並列）
+# 概要     : degree_high と degree_low の2モードを排他的 subject 分割で並列実行する
+#             2モードの subject エンティティが重複しないよう自動調整される
+#             GPU2枚で並列実行し，終了後に比較プロットを生成する
+# 出力先   : outputs/degree_exclusive_no_alias/
+#             {degree_high,degree_low}/stats.jsonl 等
+#             comparison.png（2条件比較プロット）
+# 使用方法 :
+#   ./run_degree_high_low_exclusive.sh
+#   ./run_degree_high_low_exclusive.sh --num-steps 100 --p-extreme 0.10
+# 参考     : 多試行版は run_degree_exclusive_multi_trial.sh
+# =============================================================================
 
 set -e
 
 echo "========================================"
-echo "Sequential Editing - Degree Binned Analysis"
+echo "Sequential Editing - Degree High/Low (Exclusive Subjects)"
 echo "========================================"
 echo ""
 
 # Default parameters
 MODEL_DIR="outputs/models/gpt_small_no_alias"
 KG_DIR="data/kg/ba_no_alias"
-BASE_OUTPUT_DIR="outputs/degree_binned_no_alias"
-NUM_STEPS="1000"
+BASE_OUTPUT_DIR="outputs/degree_exclusive_no_alias"
+NUM_STEPS="100"
 NUM_RETAIN_TRIPLES="1000"
 MAX_HOP="10"
 LAYER="0"
 V_NUM_GRAD_STEPS="20"
 SEED="24"
 DEVICE="cuda"
-MAX_BINS=""  # Maximum number of bins to run (empty = all bins)
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -66,31 +76,33 @@ while [[ $# -gt 0 ]]; do
             DEVICE="$2"
             shift 2
             ;;
-        --max-bins)
-            MAX_BINS="$2"
-            shift 2
-            ;;
         --help|-h)
-            echo "Run degree-binned sequential editing experiments"
+            echo "Run degree high/low experiments with exclusive (non-overlapping) subjects"
             echo ""
             echo "Usage: $0 [options]"
             echo ""
             echo "Options:"
             echo "  --model-dir <dir>           Path to trained model (default: outputs/models/gpt_small_no_alias)"
             echo "  --kg-dir <dir>              Path to knowledge graph data (default: data/kg/ba_no_alias)"
-            echo "  --base-output-dir <dir>     Base output directory (default: outputs/degree_binned_no_alias)"
-            echo "  --num-steps <n>             Number of edits per bin (default: 1000)"
+            echo "  --base-output-dir <dir>     Base output directory (default: outputs/degree_exclusive_no_alias)"
+            echo "  --num-steps <n>             Number of entities to use per mode (default: 100)"
+            echo "                              - degree_high uses top <n> highest-degree entities"
+            echo "                              - degree_low uses bottom <n> lowest-degree entities"
             echo "  --num-retain-triples <n>    Number of unedited triples (default: 1000)"
             echo "  --max-hop <n>               Maximum hop distance (default: 10)"
             echo "  --layer <n>                 Layer to edit (default: 0)"
             echo "  --v-num-grad-steps <n>      ROME gradient steps (default: 20)"
             echo "  --seed <n>                  Random seed (default: 24)"
             echo "  --device <device>           Device: cuda or cpu (default: cuda)"
-            echo "  --max-bins <n>              Maximum number of bins to run (default: all)"
             echo "  --help, -h                  Show this help message"
             echo ""
-            echo "This script divides triples by degree (high to low) into bins of NUM_STEPS size"
-            echo "and runs editing experiments for each bin. The remainder (last partial bin) is discarded."
+            echo "This script runs 2 experiments in parallel:"
+            echo "  1. degree_high - High degree subjects (top <n> unique subjects)"
+            echo "  2. degree_low  - Low degree subjects (bottom <n> unique subjects)"
+            echo ""
+            echo "Subject entities are guaranteed not to overlap between the two modes."
+            echo "If NUM_STEPS * 2 > unique_subjects, NUM_STEPS is automatically adjusted"
+            echo "to unique_subjects / 2 to ensure no overlap."
             echo ""
             exit 0
             ;;
@@ -106,16 +118,13 @@ echo "Configuration:"
 echo "  Model directory: $MODEL_DIR"
 echo "  KG directory: $KG_DIR"
 echo "  Base output directory: $BASE_OUTPUT_DIR"
-echo "  Edits per bin: $NUM_STEPS"
+echo "  Number of steps: $NUM_STEPS"
 echo "  Retain triples: $NUM_RETAIN_TRIPLES"
 echo "  Max hop distance: $MAX_HOP"
 echo "  Edit layer: $LAYER"
 echo "  ROME v_num_grad_steps: $V_NUM_GRAD_STEPS"
 echo "  Random seed: $SEED"
 echo "  Device: $DEVICE"
-if [ -n "$MAX_BINS" ]; then
-    echo "  Max bins: $MAX_BINS"
-fi
 echo ""
 
 # Check if model exists
@@ -135,62 +144,35 @@ fi
 mkdir -p "$BASE_OUTPUT_DIR"
 
 echo "========================================"
-echo "Analyzing KG to determine bin structure..."
+echo "Starting 2 experiments in parallel..."
 echo "========================================"
 echo ""
 
-# Get total number of triples and compute number of bins
-TOTAL_TRIPLES=$(wc -l < "$KG_DIR/corpus.train.txt")
-NUM_BINS=$((TOTAL_TRIPLES / NUM_STEPS))
-REMAINDER=$((TOTAL_TRIPLES % NUM_STEPS))
+# Define function to run a single experiment
+run_experiment() {
+    local MODE=$1
+    local OUTPUT_DIR="${BASE_OUTPUT_DIR}/${MODE}"
 
-echo "Total triples: $TOTAL_TRIPLES"
-echo "Bin size (NUM_STEPS): $NUM_STEPS"
-echo "Number of complete bins: $NUM_BINS"
-echo "Remainder (will be discarded): $REMAINDER"
-echo ""
+    # Assign GPU: degree_high to cuda:0, degree_low to cuda:1
+    local ASSIGNED_DEVICE
+    if [ "$MODE" = "degree_high" ]; then
+        ASSIGNED_DEVICE="cuda:0"
+    else
+        ASSIGNED_DEVICE="cuda:1"
+    fi
 
-# Apply max_bins limit if specified
-if [ -n "$MAX_BINS" ] && [ "$MAX_BINS" -lt "$NUM_BINS" ]; then
-    echo "Limiting to $MAX_BINS bins (out of $NUM_BINS total)"
-    NUM_BINS=$MAX_BINS
-    echo ""
-fi
-
-if [ "$NUM_BINS" -eq 0 ]; then
-    echo "Error: Not enough triples to create even one bin of size $NUM_STEPS"
-    exit 1
-fi
-
-echo "========================================"
-echo "Starting $NUM_BINS experiments in parallel..."
-echo "========================================"
-echo ""
-
-# Define function to run a single bin experiment
-run_bin_experiment() {
-    local BIN_ID=$1
-    local START_IDX=$((BIN_ID * NUM_STEPS))
-    local END_IDX=$(((BIN_ID + 1) * NUM_STEPS))
-    local OUTPUT_DIR="${BASE_OUTPUT_DIR}/bin_${BIN_ID}"
-
-    # Assign GPU: even bins to cuda:0, odd bins to cuda:1
-    local GPU_ID=$((BIN_ID % 2))
-    local ASSIGNED_DEVICE="cuda:${GPU_ID}"
-
-    echo "[bin_${BIN_ID}] Starting experiment (triples ${START_IDX}-$((END_IDX - 1)), GPU: ${ASSIGNED_DEVICE})..."
+    echo "[${MODE}] Starting experiment (GPU: ${ASSIGNED_DEVICE})..."
 
     # Create output directory
     mkdir -p "$OUTPUT_DIR"
 
-    python -m src.scripts.run_degree_binned_edits \
+    python -m src.scripts.run_degree_exclusive_edits \
         --model-dir "$MODEL_DIR" \
         --kg-dir "$KG_DIR" \
         --output-dir "$OUTPUT_DIR" \
         --num-steps "$NUM_STEPS" \
-        --bin-start-idx "$START_IDX" \
-        --bin-end-idx "$END_IDX" \
         --num-retain-triples "$NUM_RETAIN_TRIPLES" \
+        --selection-mode "$MODE" \
         --max-hop "$MAX_HOP" \
         --layer "$LAYER" \
         --v-num-grad-steps "$V_NUM_GRAD_STEPS" \
@@ -201,56 +183,55 @@ run_bin_experiment() {
     local EXIT_CODE=$?
 
     if [ $EXIT_CODE -eq 0 ]; then
-        echo "[bin_${BIN_ID}] ✓ Experiment completed successfully"
+        echo "[${MODE}] ✓ Experiment completed successfully"
 
         # Run analysis
-        echo "[bin_${BIN_ID}] Generating visualizations..."
+        echo "[${MODE}] Generating visualizations..."
         python -m src.scripts.analyze_sequential_effects \
             --output-dir "$OUTPUT_DIR" \
             >> "${OUTPUT_DIR}/run.log" 2>&1
 
         if [ $? -eq 0 ]; then
-            echo "[bin_${BIN_ID}] ✓ Visualization completed"
+            echo "[${MODE}] ✓ Visualization completed"
         else
-            echo "[bin_${BIN_ID}] ✗ Visualization failed (check ${OUTPUT_DIR}/run.log)"
+            echo "[${MODE}] ✗ Visualization failed (check ${OUTPUT_DIR}/run.log)"
         fi
     else
-        echo "[bin_${BIN_ID}] ✗ Experiment failed with exit code $EXIT_CODE (check ${OUTPUT_DIR}/run.log)"
+        echo "[${MODE}] ✗ Experiment failed with exit code $EXIT_CODE (check ${OUTPUT_DIR}/run.log)"
     fi
 
     return $EXIT_CODE
 }
 
 # Export function and variables for parallel execution
-export -f run_bin_experiment
+export -f run_experiment
 export MODEL_DIR KG_DIR BASE_OUTPUT_DIR NUM_STEPS NUM_RETAIN_TRIPLES MAX_HOP LAYER V_NUM_GRAD_STEPS SEED DEVICE
 
-# Launch all bin experiments in parallel
+# Run both experiments in parallel
 echo "Launching parallel experiments..."
 echo ""
 
-PIDS=()
-for ((BIN_ID=0; BIN_ID<NUM_BINS; BIN_ID++)); do
-    run_bin_experiment "$BIN_ID" &
-    PID=$!
-    PIDS+=($PID)
-    echo "  [bin_${BIN_ID}] PID: $PID"
-done
+run_experiment "degree_high" &
+PID_DEGREE_HIGH=$!
+echo "  [degree_high] PID: $PID_DEGREE_HIGH"
+
+run_experiment "degree_low" &
+PID_DEGREE_LOW=$!
+echo "  [degree_low]  PID: $PID_DEGREE_LOW"
 
 echo ""
 echo "All experiments launched. Waiting for completion..."
 echo "You can monitor progress in real-time:"
-for ((BIN_ID=0; BIN_ID<NUM_BINS; BIN_ID++)); do
-    echo "  tail -f $BASE_OUTPUT_DIR/bin_${BIN_ID}/run.log"
-done
+echo "  tail -f $BASE_OUTPUT_DIR/degree_high/run.log"
+echo "  tail -f $BASE_OUTPUT_DIR/degree_low/run.log"
 echo ""
 
-# Wait for all background jobs and collect exit codes
-EXIT_CODES=()
-for ((i=0; i<NUM_BINS; i++)); do
-    wait ${PIDS[$i]}
-    EXIT_CODES+=($?)
-done
+# Wait for all background jobs
+wait $PID_DEGREE_HIGH
+EXIT_DEGREE_HIGH=$?
+
+wait $PID_DEGREE_LOW
+EXIT_DEGREE_LOW=$?
 
 echo ""
 echo "========================================"
@@ -261,26 +242,28 @@ echo ""
 # Print summary
 echo "Summary:"
 echo "--------"
-SUCCESS_COUNT=0
-for ((i=0; i<NUM_BINS; i++)); do
-    if [ ${EXIT_CODES[$i]} -eq 0 ]; then
-        echo "  [bin_${i}] ✓ SUCCESS"
-        SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
-    else
-        echo "  [bin_${i}] ✗ FAILED"
-    fi
-done
+if [ $EXIT_DEGREE_HIGH -eq 0 ]; then
+    echo "  [degree_high] ✓ SUCCESS"
+else
+    echo "  [degree_high] ✗ FAILED"
+fi
+
+if [ $EXIT_DEGREE_LOW -eq 0 ]; then
+    echo "  [degree_low]  ✓ SUCCESS"
+else
+    echo "  [degree_low]  ✗ FAILED"
+fi
 
 echo ""
 
-# Generate comparison plot if at least 2 experiments succeeded
-if [ $SUCCESS_COUNT -ge 2 ]; then
+# Generate comparison plot if both experiments succeeded
+if [ $EXIT_DEGREE_HIGH -eq 0 ] && [ $EXIT_DEGREE_LOW -eq 0 ]; then
     echo "========================================"
-    echo "Generating degree bin comparison plot..."
+    echo "Generating comparison plot..."
     echo "========================================"
     echo ""
 
-    python -m src.scripts.compare_degree_bins --base-dir "$BASE_OUTPUT_DIR" --num-bins "$NUM_BINS"
+    python -m src.scripts.compare_selection_modes --base-dir "$BASE_OUTPUT_DIR"
 
     if [ $? -eq 0 ]; then
         echo ""
@@ -290,30 +273,31 @@ if [ $SUCCESS_COUNT -ge 2 ]; then
         echo "⚠ Failed to generate comparison plot"
     fi
 else
-    echo "⚠ Skipping comparison plot (need at least 2 successful experiments)"
+    echo "⚠ Skipping comparison plot (need both experiments to succeed)"
 fi
 
 echo ""
 echo "Results directory: $BASE_OUTPUT_DIR"
 echo ""
 echo "Generated outputs:"
-for ((i=0; i<NUM_BINS; i++)); do
-    if [ $i -eq 0 ]; then
-        echo "  - ${BASE_OUTPUT_DIR}/bin_${i}/"
-        echo "      ├── config.json"
-        echo "      ├── stats.jsonl"
-        echo "      ├── plots_time_series.png"
-        echo "      └── run.log"
-    else
-        echo "  - ${BASE_OUTPUT_DIR}/bin_${i}/"
-    fi
-done
-echo "  - ${BASE_OUTPUT_DIR}/degree_bins_comparison.png  ← Degree bin comparison plot"
+echo "  - ${BASE_OUTPUT_DIR}/degree_high/"
+echo "      ├── config.json"
+echo "      ├── stats.jsonl"
+echo "      ├── plots_time_series.png"
+echo "      └── run.log"
+echo "  - ${BASE_OUTPUT_DIR}/degree_low/"
+echo "      ├── config.json"
+echo "      ├── stats.jsonl"
+echo "      ├── plots_time_series.png"
+echo "      └── run.log"
+echo "  - ${BASE_OUTPUT_DIR}/comparison.png  ← 2条件比較プロット"
 echo ""
 
 # Check if all succeeded
-if [ $SUCCESS_COUNT -eq $NUM_BINS ]; then
+if [ $EXIT_DEGREE_HIGH -eq 0 ] && [ $EXIT_DEGREE_LOW -eq 0 ]; then
     echo "✓ All experiments completed successfully!"
+    echo ""
+    echo "Note: Subject entities used in degree_high and degree_low are guaranteed not to overlap."
     exit 0
 else
     echo "⚠ Some experiments failed. Check the logs for details."

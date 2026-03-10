@@ -1,7 +1,15 @@
 #!/bin/bash
-
-# Knowledge Graph Visualization Script
-# Generates comprehensive visualizations and statistics for graph.jsonl
+# =============================================================================
+# Script   : visualize_kg.sh
+# Category : データ確認
+# 概要     : ナレッジグラフ (graph.jsonl) の構造を可視化・統計出力する
+#             次数分布・ホップ分布・グラフ概要図を生成する
+# 出力先   : outputs/kg_visualizations/
+#             (kg_overview.png, degree_distributions.png, hop_distributions.png,
+#              kg_stats.json)
+# 使用方法 :
+#   ./visualize_kg.sh
+# =============================================================================
 
 set -e  # Exit on error
 

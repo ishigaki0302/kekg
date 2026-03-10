@@ -1,14 +1,14 @@
-# """Compare results from multiple trials of hop high/low experiments.
+# """Compare results from multiple trials of degree high/low exclusive experiments.
 
-# This script loads results from multiple trials for both hop_high and hop_low,
+# This script loads results from multiple trials for both degree_high and degree_low,
 # and generates comparison plots showing:
 #   - Individual trial lines (thin, semi-transparent)
 #   - Mean line (thick)
 #   - 95% confidence interval (shaded area)
 
 # Usage:
-#     python -m src.scripts.compare_hop_multi_trial \
-#         --base-dir outputs/hop_multi_trial_no_alias \
+#     python -m src.scripts.compare_degree_exclusive_multi_trial \
+#         --base-dir outputs/degree_exclusive_multi_trial_no_alias \
 #         --num-trials 10
 # """
 
@@ -70,7 +70,7 @@
 
 #     Args:
 #         base_dir: Base directory containing mode subdirectories
-#         mode: "hop_high" or "hop_low"
+#         mode: "degree_high" or "degree_low"
 #         num_trials: Number of trials to load
 
 #     Returns:
@@ -159,24 +159,25 @@
 #         base_dir: Base directory containing trial subdirectories
 #         num_trials: Number of trials per mode
 #         output_path: Output path for the comparison figure
+#         xscale: X-axis scale ("linear" or "log")
 #     """
 #     base = Path(base_dir)
 
 #     # Load data for all trials
 #     print("Loading trial data...")
-#     hop_high_trials = load_all_trials(base, "hop_high", num_trials)
-#     hop_low_trials = load_all_trials(base, "hop_low", num_trials)
+#     degree_high_trials = load_all_trials(base, "degree_high", num_trials)
+#     degree_low_trials = load_all_trials(base, "degree_low", num_trials)
 
-#     if not hop_high_trials or not hop_low_trials:
+#     if not degree_high_trials or not degree_low_trials:
 #         print("Error: No data loaded for one or both modes. Cannot generate comparison plot.")
 #         return
 
-#     print(f"Loaded {len(hop_high_trials)} hop_high trials and {len(hop_low_trials)} hop_low trials")
+#     print(f"Loaded {len(degree_high_trials)} degree_high trials and {len(degree_low_trials)} degree_low trials")
 
 #     # Create comparison plots
 #     fig, axes = plt.subplots(2, 3, figsize=(22, 14))
 #     fig.suptitle(
-#         f"Hop Multi-Trial Comparison (n={len(hop_high_trials)} trials per mode)",
+#         f"Degree Exclusive Multi-Trial Comparison (n={len(degree_high_trials)} trials per mode)",
 #         fontsize=18,
 #         y=0.995
 #     )
@@ -204,11 +205,11 @@
 #         ax = axes[row, col]
 
 #         # Filter to non-baseline steps
-#         hop_high_non_base = [df[~df["is_baseline"]] for df in hop_high_trials]
-#         hop_low_non_base = [df[~df["is_baseline"]] for df in hop_low_trials]
+#         degree_high_non_base = [df[~df["is_baseline"]] for df in degree_high_trials]
+#         degree_low_non_base = [df[~df["is_baseline"]] for df in degree_low_trials]
 
 #         # Plot individual trials (thin, semi-transparent)
-#         for trial_df in hop_high_non_base:
+#         for trial_df in degree_high_non_base:
 #             if metric in trial_df.columns:
 #                 ax.plot(
 #                     trial_df["step"],
@@ -219,7 +220,7 @@
 #                     zorder=1
 #                 )
 
-#         for trial_df in hop_low_non_base:
+#         for trial_df in degree_low_non_base:
 #             if metric in trial_df.columns:
 #                 ax.plot(
 #                     trial_df["step"],
@@ -231,8 +232,8 @@
 #                 )
 
 #         # Compute statistics and plot mean + CI
-#         if hop_high_non_base and metric in hop_high_non_base[0].columns:
-#             mean_high, lower_high, upper_high = compute_statistics(hop_high_non_base, metric)
+#         if degree_high_non_base and metric in degree_high_non_base[0].columns:
+#             mean_high, lower_high, upper_high = compute_statistics(degree_high_non_base, metric)
 
 #             # Plot confidence interval
 #             ax.fill_between(
@@ -250,12 +251,12 @@
 #                 mean_high[metric],
 #                 color=color_high,
 #                 linewidth=3,
-#                 label=f"Hop High (mean, n={len(hop_high_non_base)})",
+#                 label=f"Degree High (mean, n={len(degree_high_non_base)})",
 #                 zorder=3
 #             )
 
-#         if hop_low_non_base and metric in hop_low_non_base[0].columns:
-#             mean_low, lower_low, upper_low = compute_statistics(hop_low_non_base, metric)
+#         if degree_low_non_base and metric in degree_low_non_base[0].columns:
+#             mean_low, lower_low, upper_low = compute_statistics(degree_low_non_base, metric)
 
 #             # Plot confidence interval
 #             ax.fill_between(
@@ -273,7 +274,7 @@
 #                 mean_low[metric],
 #                 color=color_low,
 #                 linewidth=3,
-#                 label=f"Hop Low (mean, n={len(hop_low_non_base)})",
+#                 label=f"Degree Low (mean, n={len(degree_low_non_base)})",
 #                 zorder=3
 #             )
 
@@ -296,7 +297,7 @@
 
 #     # Extract final step metrics for each trial
 #     final_metrics_high = []
-#     for trial_df in hop_high_non_base:
+#     for trial_df in degree_high_non_base:
 #         if not trial_df.empty:
 #             last_step = trial_df.iloc[-1]
 #             final_metrics_high.append({
@@ -305,7 +306,7 @@
 #             })
 
 #     final_metrics_low = []
-#     for trial_df in hop_low_non_base:
+#     for trial_df in degree_low_non_base:
 #         if not trial_df.empty:
 #             last_step = trial_df.iloc[-1]
 #             final_metrics_low.append({
@@ -331,7 +332,7 @@
 #         sem_retain_low = np.std(retain_acc_low, ddof=1) / np.sqrt(len(retain_acc_low))
 
 #         # Bar chart
-#         x = np.arange(2)  # Two groups: Hop High, Hop Low
+#         x = np.arange(2)  # Two groups: Degree High, Degree Low
 #         width = 0.35
 
 #         ax.bar(
@@ -357,7 +358,7 @@
 #         ax.set_ylabel("Accuracy", fontsize=12)
 #         ax.set_title("Final Step Accuracy (Mean ± 95% CI)", fontsize=14)
 #         ax.set_xticks(x)
-#         ax.set_xticklabels(["Hop High", "Hop Low"], fontsize=11)
+#         ax.set_xticklabels(["Degree High", "Degree Low"], fontsize=11)
 #         ax.set_ylim(0, 1.05)
 #         ax.legend(fontsize=10, loc='best')
 #         ax.grid(True, alpha=0.3, axis='y')
@@ -385,7 +386,7 @@
 #     print("Multi-Trial Summary Statistics")
 #     print("=" * 80)
 
-#     for mode in ["hop_high", "hop_low"]:
+#     for mode in ["degree_high", "degree_low"]:
 #         trial_dfs = load_all_trials(base, mode, num_trials)
 
 #         if not trial_dfs:
@@ -420,7 +421,7 @@
 # def main():
 #     """Main entry point for multi-trial comparison analysis."""
 #     parser = argparse.ArgumentParser(
-#         description="Compare multi-trial hop high/low sequential editing results"
+#         description="Compare multi-trial degree exclusive sequential editing results"
 #     )
 #     parser.add_argument(
 #         "--base-dir",
@@ -448,7 +449,7 @@
 #         args.output = str(Path(args.base_dir) / "multi_trial_comparison.png")
 
 #     print("=" * 80)
-#     print("Hop Multi-Trial Comparison Analysis")
+#     print("Degree Exclusive Multi-Trial Comparison Analysis")
 #     print("=" * 80)
 #     print(f"Base directory: {args.base_dir}")
 #     print(f"Number of trials per mode: {args.num_trials}")
@@ -470,22 +471,22 @@
 
 # if __name__ == "__main__":
 #     main()
-"""Compare results from multiple trials of hop high/low experiments.
+"""Compare results from multiple trials of degree high/low exclusive experiments.
 
-This script loads results from multiple trials for both hop_high and hop_low,
+This script loads results from multiple trials for both degree_high and degree_low,
 and generates comparison plots showing:
   - Individual trial lines (thin, semi-transparent)
   - Mean line (thick)
   - 95% confidence interval (shaded area)
 
 Usage:
-    python -m src.scripts.compare_hop_multi_trial \
-        --base-dir outputs/hop_multi_trial_no_alias \
+    python -m src.scripts.compare_degree_exclusive_multi_trial \
+        --base-dir outputs/degree_exclusive_multi_trial_no_alias \
         --num-trials 10
 
 Optional (cut x-axis by step):
-    python -m src.scripts.compare_hop_multi_trial \
-        --base-dir outputs/hop_multi_trial_no_alias \
+    python -m src.scripts.compare_degree_exclusive_multi_trial \
+        --base-dir outputs/degree_exclusive_multi_trial_no_alias \
         --num-trials 10 \
         --max-step 20
 """
@@ -521,9 +522,6 @@ def load_trial_stats(trial_dir: Path) -> pd.DataFrame:
                 continue
 
             # Handle malformed JSONL where multiple records might be on one line
-            # Use regex to find all JSON objects (matches from "{" to "}")
-            import re
-
             # Find all complete JSON objects by matching balanced braces
             json_strings = []
             i = 0
@@ -557,29 +555,38 @@ def load_trial_stats(trial_dir: Path) -> pd.DataFrame:
                     print(f"JSON string (first 200 chars): {json_str[:200]}")
                     continue  # Skip this malformed record instead of crashing
 
-            # Extract key metrics
-            if "edit" not in record:
-                # Baseline
-                flat_record = {
-                    "step": record["step"],
-                    "edited_acc": record.get("edited_acc", 0.0),
-                    "retain_acc": record.get("retain_acc", 0.0),
-                    "is_baseline": True,
-                }
-            else:
-                # Regular step
-                flat_record = {
-                    "step": record["step"],
-                    "edit_success": record["edit_success"]["is_success_top1"],
-                    "retention_rate": record["retention_rate"],
-                    "edited_acc": record.get("edited_acc", 0.0),
-                    "retain_acc": record.get("retain_acc", 0.0),
-                    "weight_fro_norm": record["weight_fro_norm"],
-                    "is_baseline": False,
-                }
-            records.append(flat_record)
+                # Extract key metrics
+                if "edit" not in record:
+                    # Baseline
+                    flat_record = {
+                        "step": record["step"],
+                        "edited_acc": record.get("edited_acc", 0.0),
+                        "retain_acc": record.get("retain_acc", 0.0),
+                        "is_baseline": True,
+                    }
+                else:
+                    # Regular step
+                    flat_record = {
+                        "step": record["step"],
+                        "edit_success": record["edit_success"]["is_success_top1"],
+                        "retention_rate": record["retention_rate"],
+                        "edited_acc": record.get("edited_acc", 0.0),
+                        "retain_acc": record.get("retain_acc", 0.0),
+                        "weight_fro_norm": record["weight_fro_norm"],
+                        "is_baseline": False,
+                    }
+                records.append(flat_record)
 
-    return pd.DataFrame(records)
+    df = pd.DataFrame(records)
+    if df.empty:
+        return df
+
+    # Ensure step is numeric + sorted (does not change behavior if already sorted)
+    df["step"] = pd.to_numeric(df["step"], errors="coerce")
+    df = df.dropna(subset=["step"])
+    df["step"] = df["step"].astype(int)
+    df = df.sort_values("step").reset_index(drop=True)
+    return df
 
 
 def load_all_trials(base_dir: Path, mode: str, num_trials: int) -> List[pd.DataFrame]:
@@ -587,7 +594,7 @@ def load_all_trials(base_dir: Path, mode: str, num_trials: int) -> List[pd.DataF
 
     Args:
         base_dir: Base directory containing mode subdirectories
-        mode: "hop_high" or "hop_low"
+        mode: "degree_high" or "degree_low"
         num_trials: Number of trials to load
 
     Returns:
@@ -610,7 +617,9 @@ def load_all_trials(base_dir: Path, mode: str, num_trials: int) -> List[pd.DataF
     return trial_dfs
 
 
-def compute_statistics(trial_dfs: List[pd.DataFrame], metric: str) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def compute_statistics(
+    trial_dfs: List[pd.DataFrame], metric: str
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Compute mean and 95% confidence interval for a metric across trials.
 
     NOTE:
@@ -698,24 +707,24 @@ def plot_multi_trial_comparison(
 
     # Load data for all trials
     print("Loading trial data...")
-    hop_high_trials = load_all_trials(base, "hop_high", num_trials)
-    hop_low_trials = load_all_trials(base, "hop_low", num_trials)
+    degree_high_trials = load_all_trials(base, "degree_high", num_trials)
+    degree_low_trials = load_all_trials(base, "degree_low", num_trials)
 
-    if not hop_high_trials or not hop_low_trials:
+    if not degree_high_trials or not degree_low_trials:
         print("Error: No data loaded for one or both modes. Cannot generate comparison plot.")
         return
 
-    print(f"Loaded {len(hop_high_trials)} hop_high trials and {len(hop_low_trials)} hop_low trials")
+    print(f"Loaded {len(degree_high_trials)} degree_high trials and {len(degree_low_trials)} degree_low trials")
 
     # Filter to non-baseline steps (once)
-    hop_high_non_base = [df[~df["is_baseline"]].copy() for df in hop_high_trials]
-    hop_low_non_base = [df[~df["is_baseline"]].copy() for df in hop_low_trials]
+    degree_high_non_base = [df[~df["is_baseline"]].copy() for df in degree_high_trials]
+    degree_low_non_base = [df[~df["is_baseline"]].copy() for df in degree_low_trials]
 
     # Optional: cut by max_step (data-level truncation)
-    hop_high_non_base = _apply_max_step(hop_high_non_base, max_step)
-    hop_low_non_base = _apply_max_step(hop_low_non_base, max_step)
+    degree_high_non_base = _apply_max_step(degree_high_non_base, max_step)
+    degree_low_non_base = _apply_max_step(degree_low_non_base, max_step)
 
-    if not hop_high_non_base or not hop_low_non_base:
+    if not degree_high_non_base or not degree_low_non_base:
         print("Error: After applying --max-step, no non-baseline data remains for one or both modes.")
         return
 
@@ -723,7 +732,7 @@ def plot_multi_trial_comparison(
     fig, axes = plt.subplots(2, 3, figsize=(28, 14))
     title_suffix = "" if max_step is None else f" (up to step {max_step})"
     fig.suptitle(
-        f"Hop Multi-Trial Comparison (n={len(hop_high_non_base)} trials per mode){title_suffix}",
+        f"Degree Exclusive Multi-Trial Comparison (n={len(degree_high_non_base)} trials per mode){title_suffix}",
         fontsize=18,
         y=0.995,
     )
@@ -732,7 +741,7 @@ def plot_multi_trial_comparison(
     color_high = "C0"  # Blue
     color_low = "C1"   # Orange
 
-    # Metrics to plot
+    # Metrics to plot (5 metrics)
     metrics = [
         ("edit_success", "Edit Success (0/1)", "Edit Success Rate"),
         ("retention_rate", "Retention Rate", "Retention of Past Edits"),
@@ -743,15 +752,12 @@ def plot_multi_trial_comparison(
 
     # Plot each metric
     for idx, (metric, ylabel, title) in enumerate(metrics):
-        if idx >= 5:
-            break
-
         row = idx // 3
         col = idx % 3
         ax = axes[row, col]
 
         # Plot individual trials (thin, semi-transparent)
-        for trial_df in hop_high_non_base:
+        for trial_df in degree_high_non_base:
             if metric in trial_df.columns:
                 ax.plot(
                     trial_df["step"],
@@ -762,7 +768,7 @@ def plot_multi_trial_comparison(
                     zorder=1,
                 )
 
-        for trial_df in hop_low_non_base:
+        for trial_df in degree_low_non_base:
             if metric in trial_df.columns:
                 ax.plot(
                     trial_df["step"],
@@ -774,8 +780,8 @@ def plot_multi_trial_comparison(
                 )
 
         # Compute statistics and plot mean + CI
-        if hop_high_non_base and metric in hop_high_non_base[0].columns:
-            mean_high, lower_high, upper_high = compute_statistics(hop_high_non_base, metric)
+        if metric in degree_high_non_base[0].columns:
+            mean_high, lower_high, upper_high = compute_statistics(degree_high_non_base, metric)
 
             ax.fill_between(
                 mean_high["step"],
@@ -790,12 +796,12 @@ def plot_multi_trial_comparison(
                 mean_high[metric],
                 color=color_high,
                 linewidth=3,
-                label=f"Hop High (mean, n={len(hop_high_non_base)})",
+                label=f"Degree High (mean, n={len(degree_high_non_base)})",
                 zorder=3,
             )
 
-        if hop_low_non_base and metric in hop_low_non_base[0].columns:
-            mean_low, lower_low, upper_low = compute_statistics(hop_low_non_base, metric)
+        if metric in degree_low_non_base[0].columns:
+            mean_low, lower_low, upper_low = compute_statistics(degree_low_non_base, metric)
 
             ax.fill_between(
                 mean_low["step"],
@@ -810,7 +816,7 @@ def plot_multi_trial_comparison(
                 mean_low[metric],
                 color=color_low,
                 linewidth=3,
-                label=f"Hop Low (mean, n={len(hop_low_non_base)})",
+                label=f"Degree Low (mean, n={len(degree_low_non_base)})",
                 zorder=3,
             )
 
@@ -833,7 +839,7 @@ def plot_multi_trial_comparison(
 
     # Extract final step metrics for each trial (final within truncated range if --max-step is used)
     final_metrics_high = []
-    for trial_df in hop_high_non_base:
+    for trial_df in degree_high_non_base:
         if not trial_df.empty:
             last_step = trial_df.iloc[-1]
             final_metrics_high.append({
@@ -842,7 +848,7 @@ def plot_multi_trial_comparison(
             })
 
     final_metrics_low = []
-    for trial_df in hop_low_non_base:
+    for trial_df in degree_low_non_base:
         if not trial_df.empty:
             last_step = trial_df.iloc[-1]
             final_metrics_low.append({
@@ -861,32 +867,19 @@ def plot_multi_trial_comparison(
         mean_edited_low = np.mean(edited_acc_low)
         mean_retain_low = np.mean(retain_acc_low)
 
-        # Keep original behavior: if n==1, std(ddof=1) would be nan -> so guard
-        sem_edited_high = (
-            np.std(edited_acc_high, ddof=1) / np.sqrt(len(edited_acc_high))
-            if len(edited_acc_high) > 1 else 0.0
-        )
-        sem_retain_high = (
-            np.std(retain_acc_high, ddof=1) / np.sqrt(len(retain_acc_high))
-            if len(retain_acc_high) > 1 else 0.0
-        )
-        sem_edited_low = (
-            np.std(edited_acc_low, ddof=1) / np.sqrt(len(edited_acc_low))
-            if len(edited_acc_low) > 1 else 0.0
-        )
-        sem_retain_low = (
-            np.std(retain_acc_low, ddof=1) / np.sqrt(len(retain_acc_low))
-            if len(retain_acc_low) > 1 else 0.0
-        )
+        sem_edited_high = np.std(edited_acc_high, ddof=1) / np.sqrt(len(edited_acc_high)) if len(edited_acc_high) > 1 else 0.0
+        sem_retain_high = np.std(retain_acc_high, ddof=1) / np.sqrt(len(retain_acc_high)) if len(retain_acc_high) > 1 else 0.0
+        sem_edited_low = np.std(edited_acc_low, ddof=1) / np.sqrt(len(edited_acc_low)) if len(edited_acc_low) > 1 else 0.0
+        sem_retain_low = np.std(retain_acc_low, ddof=1) / np.sqrt(len(retain_acc_low)) if len(retain_acc_low) > 1 else 0.0
 
-        x = np.arange(2)  # Hop High, Hop Low
+        x = np.arange(2)  # Degree High, Degree Low
         width = 0.35
 
         ax.bar(
             x - width / 2,
             [mean_edited_high, mean_edited_low],
             width,
-            yerr=[sem_edited_high * 1.96, sem_edited_low * 1.96],  # 95% CI approx
+            yerr=[sem_edited_high * 1.96, sem_edited_low * 1.96],  # approx 95% CI
             label="Edited Acc",
             alpha=0.8,
             capsize=5,
@@ -895,7 +888,7 @@ def plot_multi_trial_comparison(
             x + width / 2,
             [mean_retain_high, mean_retain_low],
             width,
-            yerr=[sem_retain_high * 1.96, sem_retain_low * 1.96],  # 95% CI approx
+            yerr=[sem_retain_high * 1.96, sem_retain_low * 1.96],  # approx 95% CI
             label="Retain Acc",
             alpha=0.8,
             capsize=5,
@@ -905,7 +898,7 @@ def plot_multi_trial_comparison(
         ax.set_ylabel("Accuracy", fontsize=12)
         ax.set_title("Final Step Accuracy (Mean ± 95% CI)", fontsize=14)
         ax.set_xticks(x)
-        ax.set_xticklabels(["Hop High", "Hop Low"], fontsize=11)
+        ax.set_xticklabels(["Degree High", "Degree Low"], fontsize=11)
         ax.set_ylim(0, 1.05)
         ax.legend(fontsize=10, loc='center left', bbox_to_anchor=(1.05, 0.5))
         ax.grid(True, alpha=0.3, axis="y")
@@ -941,9 +934,8 @@ def print_summary_stats(base_dir: str, num_trials: int, max_step: Optional[int] 
         print(f"(up to step {max_step})")
     print("=" * 80)
 
-    for mode in ["hop_high", "hop_low"]:
+    for mode in ["degree_high", "degree_low"]:
         trial_dfs = load_all_trials(base, mode, num_trials)
-
         if not trial_dfs:
             continue
 
@@ -979,7 +971,7 @@ def print_summary_stats(base_dir: str, num_trials: int, max_step: Optional[int] 
 def main():
     """Main entry point for multi-trial comparison analysis."""
     parser = argparse.ArgumentParser(
-        description="Compare multi-trial hop high/low sequential editing results"
+        description="Compare multi-trial degree exclusive sequential editing results"
     )
     parser.add_argument(
         "--base-dir",
@@ -1013,7 +1005,7 @@ def main():
         args.output = str(Path(args.base_dir) / "multi_trial_comparison.png")
 
     print("=" * 80)
-    print("Hop Multi-Trial Comparison Analysis")
+    print("Degree Exclusive Multi-Trial Comparison Analysis")
     print("=" * 80)
     print(f"Base directory: {args.base_dir}")
     print(f"Number of trials per mode: {args.num_trials}")
@@ -1026,12 +1018,20 @@ def main():
 
     # Generate comparison plots (linear + log)
     output_linear = args.output
-    output_log = str(Path(output_linear).with_name(Path(output_linear).stem + "_log" + Path(output_linear).suffix))
+    output_log = str(
+        Path(output_linear).with_name(
+            Path(output_linear).stem + "_log" + Path(output_linear).suffix
+        )
+    )
 
-    plot_multi_trial_comparison(args.base_dir, args.num_trials, output_linear, xscale="linear", max_step=args.max_step)
-    plot_multi_trial_comparison(args.base_dir, args.num_trials, output_log, xscale="log", max_step=args.max_step)
+    plot_multi_trial_comparison(
+        args.base_dir, args.num_trials, output_linear, xscale="linear", max_step=args.max_step
+    )
+    plot_multi_trial_comparison(
+        args.base_dir, args.num_trials, output_log, xscale="log", max_step=args.max_step
+    )
 
-    # Print summary statistics
+    # Print summary statistics (final step within the same range if max-step is set)
     print_summary_stats(args.base_dir, args.num_trials, max_step=args.max_step)
 
     print("\n✓ Multi-trial comparison analysis complete!")

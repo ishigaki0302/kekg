@@ -1,5 +1,15 @@
 #!/bin/bash
-# Train GPT model on knowledge graph corpus
+# =============================================================================
+# Script   : run_training.sh
+# Category : 学習
+# 概要     : GPTMini モデルを SROコーパスで学習する
+# 出力先   : outputs/models/gpt_small_no_alias/
+#             (model.pt, tokenizer.json, metrics.json, train.log 等)
+# 使用方法 :
+#   ./run_training.sh
+#   ./run_training.sh --config configs/train_gpt_small_no_alias.yaml
+#   ./run_training.sh --output-dir outputs/models/my_model
+# =============================================================================
 
 set -e
 

@@ -1,5 +1,20 @@
 #!/bin/bash
-# Run sequential editing experiments for all selection modes in parallel
+# =============================================================================
+# Script   : run_all_selection_modes.sh
+# Category : 知識編集 - 比較実験（並列）
+# 概要     : 4つの編集選択モード（degree_high / degree_low / hop_high / hop_low）を
+#             GPU2枚で並列実行して比較する
+#             各モードの結果を analyze_sequential_effects で個別に可視化した後，
+#             compare_selection_modes で4条件の比較プロットを生成する
+# 出力先   : outputs/sequential_comparison_no_alias/
+#             {degree_high,degree_low,hop_high,hop_low}/stats.jsonl 等
+#             comparison.png（4条件比較プロット）
+# 使用方法 :
+#   ./run_all_selection_modes.sh
+#   ./run_all_selection_modes.sh --num-steps 200 --seed 42
+# 次のステップ:
+#   ./compare_results.sh（単体でプロットを再生成したい場合）
+# =============================================================================
 
 set -e
 

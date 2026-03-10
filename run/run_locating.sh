@@ -1,5 +1,17 @@
 #!/bin/bash
-# Run ROME Locating (Causal Tracing) on random samples
+# =============================================================================
+# Script   : run_locating.sh
+# Category : 知識編集 - 事前分析
+# 概要     : Causal Tracing（因果追跡）をランダムサンプルに対してバッチ実行し，
+#             モデルのどの層に知識が格納されているかを特定する
+# 出力先   : outputs/locating_results_no_alias/
+#             (locating_summary.json, trace_*.png)
+# 使用方法 :
+#   ./run_locating.sh
+#   ./run_locating.sh --num-samples 100 --noise-level 3.0
+#   ./run_locating.sh --model-dir outputs/models/gpt_small_no_alias \
+#                     --kg-file data/kg/ba_no_alias/graph.jsonl
+# =============================================================================
 
 set -e
 

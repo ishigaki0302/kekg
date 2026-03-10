@@ -1,5 +1,16 @@
 #!/bin/bash
-# Compare results from different selection modes
+# =============================================================================
+# Script   : compare_results.sh
+# Category : 知識編集 - 比較実験 結果プロット
+# 概要     : run_all_selection_modes.sh 実行済みの結果から
+#             選択モード間の比較プロット（comparison.png）を生成する
+#             実験を再実行せずにプロットだけ生成し直したい場合に使う
+# 出力先   : {base-dir}/comparison.png
+# 使用方法 :
+#   ./compare_results.sh
+#   ./compare_results.sh --base-dir outputs/sequential_comparison_no_alias
+# 前提     : run_all_selection_modes.sh を先に実行しておくこと
+# =============================================================================
 
 set -e
 

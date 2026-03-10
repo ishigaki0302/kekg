@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.utils import load_yaml, save_yaml, set_seed, Logger, load_jsonl
 from src.modeling import SROTokenizer, GPTMini, GPTConfig
-from src.kg import KnowledgeGraph, Triple
+from src.kg import KnowledgeGraph, Triple, generate_ba_kg
 from src.eval import CKEEvaluator, create_scenario_from_entity
 from src.eval.viz import (
     plot_cke_rank_histogram,
@@ -70,20 +70,10 @@ def main():
     # Load KG
     logger.info("Loading knowledge graph...")
     kg_path = Path(args.kg_dir) / "graph.jsonl"
-    aliases_path = Path(args.kg_dir) / "aliases.json"
 
     triples_data = load_jsonl(kg_path)
     triples = [Triple.from_dict(d) for d in triples_data]
-
-    aliases = load_yaml(aliases_path)
-
-    kg = KnowledgeGraph(
-        entities=list(aliases["entities"].keys()),
-        relations=list(aliases["relations"].keys()),
-        triples=triples,
-        entity_aliases=aliases["entities"],
-        relation_aliases=aliases["relations"]
-    )
+    kg = KnowledgeGraph.from_triples(triples)
 
     logger.info(f"Loaded KG: {len(kg.entities)} entities, {len(kg.triples)} triples")
 

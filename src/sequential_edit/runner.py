@@ -645,123 +645,120 @@ def run_sequential_edits(config: SeqEditConfig) -> None:
     print(f"Retain triples (unedited, for retention evaluation): {len(retain_triples)}")
 
 
-    # Open output files
-    stats_fp = open(out_dir / "stats.jsonl", "w")
-    ripple_fp = open(out_dir / "ripple_triples.jsonl", "w")
-    acc_fp = open(out_dir / "triple_acc.jsonl", "w")
+    with (
+        open(out_dir / "stats.jsonl", "w") as stats_fp,
+        open(out_dir / "ripple_triples.jsonl", "w") as ripple_fp,
+        open(out_dir / "triple_acc.jsonl", "w") as acc_fp,
+    ):
 
-    # Initialize ROME editor
-    print("Initializing ROME editor...")
-    kg_corpus_path = Path(config.kg_dir) / "corpus.train.txt"
-    rome_editor = ROME(
-        model=model,
-        tokenizer=tokenizer,
-        device=config.device,
-        kg_corpus_path=str(kg_corpus_path),
-        mom2_n_samples=1000,
-        use_mom2_adjustment=True,  # Enable to use KG corpus statistics
-        v_num_grad_steps=config.v_num_grad_steps,
-    )
-
-    # Track past edits
-    past_edits = []
-
-    # Compute baseline accuracy before any edits (on retain triples only)
-    print("\nComputing baseline accuracy before edits...")
-    baseline_retain_correct = 0
-    for triple in retain_triples:
-        eval_input = f"{triple.s} {triple.r}"
-        eval_input_ids = torch.tensor(
-            tokenizer.encode(eval_input), dtype=torch.long, device=config.device
-        ).unsqueeze(0)
-
-        with torch.no_grad():
-            eval_outputs = model(eval_input_ids)
-            eval_logits = eval_outputs["logits"][0, -1, :]
-            eval_pred_id = eval_logits.argmax().item()
-            eval_pred = tokenizer.get_token(eval_pred_id)
-
-        if eval_pred == triple.o:
-            baseline_retain_correct += 1
-
-    baseline_retain_acc = baseline_retain_correct / len(retain_triples) if retain_triples else 0.0
-    print(f"Baseline Retain Accuracy (unedited triples): {baseline_retain_acc:.4f}")
-
-    # Save baseline metrics
-    baseline_metrics = {
-        "step": 0,
-        "edited_acc": 0.0,  # No edits yet
-        "retain_acc": baseline_retain_acc,
-        "is_baseline": True,
-    }
-    stats_fp.write(json.dumps(baseline_metrics) + "\n")
-    stats_fp.flush()
-
-    # Sequential editing loop
-    print(f"\nStarting sequential editing ({config.num_steps} steps)...")
-    for step, case in enumerate(edit_cases, start=1):
-        print(f"\n[Step {step}/{config.num_steps}]")
-        print(f"  Edit: ({case['s']}, {case['r']}, {case['o_old']}) -> {case['o_new']}")
-
-        # 1. Copy model for delta logit computation
-        model_before = deepcopy(model)
-
-        # 2. Apply ROME edit (in-place on main model)
-        edited_model, edit_result = rome_editor.apply_edit(
-            s=case["s"],
-            r=case["r"],
-            o_target=case["o_new"],
-            layer=config.edit_layer,  # Use configured layer or auto-locate
-            copy_model=False,  # Edit in-place
-        )
-
-        # Update model reference (edited_model should be same as model)
-        model = edited_model
-
-        print(f"  Success: {edit_result.success}")
-        print(f"  Layer: {edit_result.layer}")
-
-        # 3. Compute step metrics
-        step_metrics = compute_step_metrics(
-            step=step,
-            model_before=model_before,
-            model_after=model,
+        # Initialize ROME editor
+        print("Initializing ROME editor...")
+        kg_corpus_path = Path(config.kg_dir) / "corpus.train.txt"
+        rome_editor = ROME(
+            model=model,
             tokenizer=tokenizer,
-            kg=kg,
-            base_weights=base_weights,
-            past_edits=past_edits,
-            current_case=case,
-            edited_triples=edited_triples,
-            retain_triples=retain_triples,
-            config=config,
-            ripple_fp=ripple_fp,
-            acc_fp=acc_fp,
+            device=config.device,
+            kg_corpus_path=str(kg_corpus_path),
+            mom2_n_samples=1000,
+            use_mom2_adjustment=True,  # Enable to use KG corpus statistics
+            v_num_grad_steps=config.v_num_grad_steps,
         )
 
-        print(f"  Retention: {step_metrics['retention_rate']:.3f}")
-        print(f"  Edited Acc: {step_metrics['edited_acc']:.3f}")
-        print(f"  Retain Acc: {step_metrics['retain_acc']:.3f}")
-        print(f"  Weight Δ: {step_metrics['weight_fro_norm']:.3f}")
+        # Track past edits
+        past_edits = []
 
-        # Write step metrics
-        stats_fp.write(json.dumps(step_metrics) + "\n")
+        # Compute baseline accuracy before any edits (on retain triples only)
+        print("\nComputing baseline accuracy before edits...")
+        baseline_retain_correct = 0
+        for triple in retain_triples:
+            eval_input = f"{triple.s} {triple.r}"
+            eval_input_ids = torch.tensor(
+                tokenizer.encode(eval_input), dtype=torch.long, device=config.device
+            ).unsqueeze(0)
+
+            with torch.no_grad():
+                eval_outputs = model(eval_input_ids)
+                eval_logits = eval_outputs["logits"][0, -1, :]
+                eval_pred_id = eval_logits.argmax().item()
+                eval_pred = tokenizer.get_token(eval_pred_id)
+
+            if eval_pred == triple.o:
+                baseline_retain_correct += 1
+
+        baseline_retain_acc = baseline_retain_correct / len(retain_triples) if retain_triples else 0.0
+        print(f"Baseline Retain Accuracy (unedited triples): {baseline_retain_acc:.4f}")
+
+        # Save baseline metrics
+        baseline_metrics = {
+            "step": 0,
+            "edited_acc": 0.0,  # No edits yet
+            "retain_acc": baseline_retain_acc,
+            "is_baseline": True,
+        }
+        stats_fp.write(json.dumps(baseline_metrics) + "\n")
         stats_fp.flush()
 
-        # Add to past edits
-        past_edits.append(
-            {
-                "step": step,
-                "s": case["s"],
-                "r": case["r"],
-                "o_old": case["o_old"],
-                "o_new": case["o_new"],
-            }
-        )
+        # Sequential editing loop
+        print(f"\nStarting sequential editing ({config.num_steps} steps)...")
+        for step, case in enumerate(edit_cases, start=1):
+            print(f"\n[Step {step}/{config.num_steps}]")
+            print(f"  Edit: ({case['s']}, {case['r']}, {case['o_old']}) -> {case['o_new']}")
 
-    # Close files
-    stats_fp.close()
-    ripple_fp.close()
-    acc_fp.close()
+            # 1. Copy model for delta logit computation
+            model_before = deepcopy(model)
+
+            # 2. Apply ROME edit (in-place on main model)
+            edited_model, edit_result = rome_editor.apply_edit(
+                s=case["s"],
+                r=case["r"],
+                o_target=case["o_new"],
+                layer=config.edit_layer,  # Use configured layer or auto-locate
+                copy_model=False,  # Edit in-place
+            )
+
+            # Update model reference (edited_model should be same as model)
+            model = edited_model
+
+            print(f"  Success: {edit_result.success}")
+            print(f"  Layer: {edit_result.layer}")
+
+            # 3. Compute step metrics
+            step_metrics = compute_step_metrics(
+                step=step,
+                model_before=model_before,
+                model_after=model,
+                tokenizer=tokenizer,
+                kg=kg,
+                base_weights=base_weights,
+                past_edits=past_edits,
+                current_case=case,
+                edited_triples=edited_triples,
+                retain_triples=retain_triples,
+                config=config,
+                ripple_fp=ripple_fp,
+                acc_fp=acc_fp,
+            )
+
+            print(f"  Retention: {step_metrics['retention_rate']:.3f}")
+            print(f"  Edited Acc: {step_metrics['edited_acc']:.3f}")
+            print(f"  Retain Acc: {step_metrics['retain_acc']:.3f}")
+            print(f"  Weight Δ: {step_metrics['weight_fro_norm']:.3f}")
+
+            # Write step metrics
+            stats_fp.write(json.dumps(step_metrics) + "\n")
+            stats_fp.flush()
+
+            # Add to past edits
+            past_edits.append(
+                {
+                    "step": step,
+                    "s": case["s"],
+                    "r": case["r"],
+                    "o_old": case["o_old"],
+                    "o_new": case["o_new"],
+                }
+            )
+
 
     print(f"\n✓ Sequential editing complete!")
     print(f"Results saved to: {out_dir}")

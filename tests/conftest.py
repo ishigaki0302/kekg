@@ -52,3 +52,37 @@ def tiny_model(tokenizer_with_vocab):
     model = GPTMini(config)
     model.eval()
     return model
+
+
+@pytest.fixture(scope="session")
+def corpus_file(small_triples, tmp_path_factory):
+    """Write small triples to a temp corpus .txt file and return the path."""
+    p = tmp_path_factory.mktemp("kg") / "corpus.train.txt"
+    with open(p, "w") as f:
+        for t in small_triples:
+            f.write(f"{t.s} {t.r} {t.o}\n")
+    return str(p)
+
+
+@pytest.fixture(scope="session")
+def editing_device():
+    """Device used for ROME / ripple tests — GPU if available."""
+    import torch
+    return "cuda" if torch.cuda.is_available() else "cpu"
+
+
+@pytest.fixture(scope="session")
+def model_for_editing(tokenizer_with_vocab, editing_device):
+    """Tiny GPT model placed on the editing device (GPU-compatible)."""
+    config = GPTConfig(
+        vocab_size=tokenizer_with_vocab.vocab_size,
+        n_layers=2,
+        n_heads=2,
+        d_model=64,
+        d_mlp=128,
+        max_seq_len=8,
+        dropout=0.0,
+    )
+    model = GPTMini(config)
+    model.eval()
+    return model.to(editing_device)

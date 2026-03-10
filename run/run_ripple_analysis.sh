@@ -206,7 +206,9 @@ echo ""
 echo "Step 3: Analyzing ripple effects and creating visualizations..."
 echo ""
 
-PYTHONPATH=. python src/scripts/analyze_ripple_effects.py
+PYTHONPATH=. python src/scripts/analyze_ripple_effects.py \
+    --kg-file data/kg/ba/graph.jsonl \
+    --output-dir outputs
 
 echo ""
 echo "======================================================================"

@@ -4,6 +4,7 @@ Analyze ripple effects from multiple editing experiments.
 Plot logit changes by degree and hop distance (subject, before_object, after_object).
 """
 
+import argparse
 import json
 import numpy as np
 import matplotlib.pyplot as plt
@@ -52,17 +53,19 @@ def compute_hop_distances(G, source_nodes):
 
     return hop_distances
 
-def analyze_ripple_experiments():
+def analyze_ripple_experiments(kg_file: str, outputs_dir: str):
     """Analyze all ripple experiments."""
 
     # Load knowledge graph
-    kg_file = 'data/kg/ba/graph.jsonl'
-    print(f"Loading knowledge graph from {kg_file}...")
-    G, degrees, triples = load_knowledge_graph(kg_file)
+    kg_path = Path(kg_file)
+    if not kg_path.exists():
+        raise FileNotFoundError(f"KG file not found: {kg_path}")
+    print(f"Loading knowledge graph from {kg_path}...")
+    G, degrees, triples = load_knowledge_graph(str(kg_path))
     print(f"Loaded {len(G.nodes())} nodes, {len(G.edges())} edges")
 
     # Load all experiments
-    exp_dirs = sorted(Path('outputs').glob('ripple_exp_*'))
+    exp_dirs = sorted(Path(outputs_dir).glob('ripple_exp_*'))
     print(f"\nFound {len(exp_dirs)} experiments")
 
     all_data = []
@@ -129,7 +132,7 @@ def analyze_ripple_experiments():
     print(f"\nTotal data points: {len(all_data)}")
     return all_data
 
-def create_plots(all_data):
+def create_plots(all_data, output_dir: Path = Path('outputs')):
     """Create visualization plots."""
 
     # Convert to arrays
@@ -285,8 +288,9 @@ def create_plots(all_data):
     plt.tight_layout()
 
     # Save
-    output_file = 'outputs/ripple_effects_analysis.png'
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    output_file = output_dir / 'ripple_effects_analysis.png'
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(str(output_file), dpi=300, bbox_inches='tight')
     print(f"\nPlot saved to: {output_file}")
 
     # Save statistics
@@ -318,17 +322,24 @@ def create_plots(all_data):
         }
     }
 
-    stats_file = 'outputs/ripple_effects_stats.json'
+    stats_file = output_dir / 'ripple_effects_stats.json'
     with open(stats_file, 'w') as f:
         json.dump(stats, f, indent=2)
     print(f"Statistics saved to: {stats_file}")
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Analyze ripple effects from editing experiments")
+    parser.add_argument("--kg-file", default="data/kg/ba/graph.jsonl",
+                        help="Path to KG graph.jsonl file (default: data/kg/ba/graph.jsonl)")
+    parser.add_argument("--output-dir", default="outputs",
+                        help="Directory containing ripple_exp_* subdirs and where plots are saved (default: outputs)")
+    args = parser.parse_args()
+
     print("=" * 70)
     print("Ripple Effects Analysis")
     print("=" * 70)
 
-    all_data = analyze_ripple_experiments()
-    create_plots(all_data)
+    all_data = analyze_ripple_experiments(args.kg_file, args.output_dir)
+    create_plots(all_data, Path(args.output_dir))
 
     print("\nAnalysis complete!")

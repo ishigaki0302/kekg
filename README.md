@@ -187,6 +187,26 @@ kekg/
 
 ---
 
+## テスト
+
+EasyEdit conda 環境でテストを実行：
+
+```bash
+/opt/conda/envs/EasyEdit/bin/python -m pytest tests/ -v
+```
+
+| テストファイル | 内容 |
+|---|---|
+| `test_kg_generation.py` | KG 生成・構造・再現性 |
+| `test_knowledge_graph.py` | `Triple.from_dict()` / `KnowledgeGraph` |
+| `test_tokenizer.py` | `SROTokenizer` エンコード・保存 |
+| `test_model.py` | GPTMini forward / `SRODataset` / `compute_accuracy` |
+| `test_rome_editing.py` | ROME 編集・重み変更・コピー不変 |
+| `test_ripple_analysis.py` | `RippleAnalyzer` logit 計算・ripple 統計 |
+| `test_sequential_editing.py` | KG BFS hop・編集ケースサンプリング（全 5 モード）・eval triple 分割 |
+
+---
+
 ## インストール
 
 ```bash

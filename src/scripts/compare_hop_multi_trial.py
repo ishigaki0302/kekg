@@ -8,7 +8,7 @@
 
 # Usage:
 #     python -m src.scripts.compare_hop_multi_trial \
-#         --base-dir outputs/hop_multi_trial_no_alias \
+#         --base-dir outputs/hop_multi_trial \
 #         --num-trials 10
 # """
 
@@ -480,12 +480,12 @@ and generates comparison plots showing:
 
 Usage:
     python -m src.scripts.compare_hop_multi_trial \
-        --base-dir outputs/hop_multi_trial_no_alias \
+        --base-dir outputs/hop_multi_trial \
         --num-trials 10
 
 Optional (cut x-axis by step):
     python -m src.scripts.compare_hop_multi_trial \
-        --base-dir outputs/hop_multi_trial_no_alias \
+        --base-dir outputs/hop_multi_trial \
         --num-trials 10 \
         --max-step 20
 """

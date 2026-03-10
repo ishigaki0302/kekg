@@ -5,7 +5,7 @@
 # 概要     : 同一 subject への編集繰り返し回数（1回/2回/4回）を変えた3モードを
 #             N 試行ずつ並列実行し，繰り返し編集の影響を多試行で比較する
 #             モード: no_rep (×1), rep_2 (×2), rep_4 (×4)
-# 出力先   : outputs/subject_rep_multi_trial_no_alias/
+# 出力先   : outputs/subject_rep_multi_trial/
 #             no_rep/trial_0/ ... rep_4/trial_N/
 #             multi_trial_comparison.png
 # 使用方法 :
@@ -21,9 +21,9 @@ echo "========================================"
 echo ""
 
 # Default parameters
-MODEL_DIR="outputs/models/gpt_small_no_alias"
-KG_DIR="data/kg/ba_no_alias"
-BASE_OUTPUT_DIR="outputs/subject_rep_multi_trial_no_alias"
+MODEL_DIR="outputs/models/gpt_small"
+KG_DIR="data/kg/ba"
+BASE_OUTPUT_DIR="outputs/subject_rep_multi_trial"
 NUM_STEPS="100"
 NUM_TRIALS="10"  # Number of trials for each mode
 NUM_RETAIN_TRIPLES="1000"
@@ -86,9 +86,9 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [options]"
             echo ""
             echo "Options:"
-            echo "  --model-dir <dir>           Path to trained model (default: outputs/models/gpt_small_no_alias)"
-            echo "  --kg-dir <dir>              Path to knowledge graph data (default: data/kg/ba_no_alias)"
-            echo "  --base-output-dir <dir>     Base output directory (default: outputs/subject_rep_multi_trial_no_alias)"
+            echo "  --model-dir <dir>           Path to trained model (default: outputs/models/gpt_small)"
+            echo "  --kg-dir <dir>              Path to knowledge graph data (default: data/kg/ba)"
+            echo "  --base-output-dir <dir>     Base output directory (default: outputs/subject_rep_multi_trial)"
             echo "  --num-steps <n>             Number of sequential edits (default: 30)"
             echo "  --num-trials <n>            Number of trials per mode (default: 10)"
             echo "  --num-retain-triples <n>    Number of unedited triples (default: 1000)"

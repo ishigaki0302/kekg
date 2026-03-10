@@ -8,7 +8,7 @@
 # 出力先   : {base-dir}/hop_distance_analysis_multi_trial.png
 # 使用方法 :
 #   ./run_hop_analysis.sh
-#   ./run_hop_analysis.sh --base-dir outputs/degree_exclusive_multi_trial_no_alias \
+#   ./run_hop_analysis.sh --base-dir outputs/degree_exclusive_multi_trial \
 #                          --num-trials 10
 # 前提     : run_degree_exclusive_multi_trial.sh を先に実行しておくこと
 # =============================================================================
@@ -21,7 +21,7 @@ echo "========================================"
 echo ""
 
 # Default parameters
-BASE_DIR="outputs/degree_exclusive_multi_trial_no_alias"
+BASE_DIR="outputs/degree_exclusive_multi_trial"
 NUM_TRIALS="10"
 
 # Parse command line arguments
@@ -41,7 +41,7 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [options]"
             echo ""
             echo "Options:"
-            echo "  --base-dir <dir>     Base output directory (default: outputs/degree_exclusive_multi_trial_no_alias)"
+            echo "  --base-dir <dir>     Base output directory (default: outputs/degree_exclusive_multi_trial)"
             echo "  --num-trials <n>     Number of trials (default: 10)"
             echo "  --help, -h           Show this help message"
             echo ""

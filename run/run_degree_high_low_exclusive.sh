@@ -5,7 +5,7 @@
 # 概要     : degree_high と degree_low の2モードを排他的 subject 分割で並列実行する
 #             2モードの subject エンティティが重複しないよう自動調整される
 #             GPU2枚で並列実行し，終了後に比較プロットを生成する
-# 出力先   : outputs/degree_exclusive_no_alias/
+# 出力先   : outputs/degree_exclusive/
 #             {degree_high,degree_low}/stats.jsonl 等
 #             comparison.png（2条件比較プロット）
 # 使用方法 :
@@ -22,9 +22,9 @@ echo "========================================"
 echo ""
 
 # Default parameters
-MODEL_DIR="outputs/models/gpt_small_no_alias"
-KG_DIR="data/kg/ba_no_alias"
-BASE_OUTPUT_DIR="outputs/degree_exclusive_no_alias"
+MODEL_DIR="outputs/models/gpt_small"
+KG_DIR="data/kg/ba"
+BASE_OUTPUT_DIR="outputs/degree_exclusive"
 NUM_STEPS="100"
 NUM_RETAIN_TRIPLES="1000"
 MAX_HOP="10"
@@ -82,9 +82,9 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [options]"
             echo ""
             echo "Options:"
-            echo "  --model-dir <dir>           Path to trained model (default: outputs/models/gpt_small_no_alias)"
-            echo "  --kg-dir <dir>              Path to knowledge graph data (default: data/kg/ba_no_alias)"
-            echo "  --base-output-dir <dir>     Base output directory (default: outputs/degree_exclusive_no_alias)"
+            echo "  --model-dir <dir>           Path to trained model (default: outputs/models/gpt_small)"
+            echo "  --kg-dir <dir>              Path to knowledge graph data (default: data/kg/ba)"
+            echo "  --base-output-dir <dir>     Base output directory (default: outputs/degree_exclusive)"
             echo "  --num-steps <n>             Number of entities to use per mode (default: 100)"
             echo "                              - degree_high uses top <n> highest-degree entities"
             echo "                              - degree_low uses bottom <n> lowest-degree entities"

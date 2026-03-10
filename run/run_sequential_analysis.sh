@@ -8,7 +8,7 @@
 #             (plots_time_series.png, plots_hop_degree_*.png, plots_failure_hist.png)
 # 使用方法 :
 #   ./run_sequential_analysis.sh
-#   ./run_sequential_analysis.sh --output-dir outputs/sequential_no_alias
+#   ./run_sequential_analysis.sh --output-dir outputs/sequential
 # 前提     : run_sequential_edits.sh を先に実行しておくこと
 # =============================================================================
 

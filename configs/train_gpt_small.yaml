@@ -12,7 +12,7 @@ train:
   batch_size: 256
   lr: 3.0e-4
   weight_decay: 0.01
-  epochs: 80
+  epochs: 100
   warmup_steps: 1000
   grad_clip: 1.0
   eval_interval: 500
@@ -20,7 +20,7 @@ train:
 
 data:
   train_path: data/kg/ba/corpus.train.txt
-  eval_all_path: data/kg/ba/corpus.all.txt
+  eval_all_path: data/kg/ba/corpus.train.txt
 
 output_dir: outputs/models/gpt_small
 

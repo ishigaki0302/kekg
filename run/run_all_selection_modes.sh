@@ -6,7 +6,7 @@
 #             GPU2枚で並列実行して比較する
 #             各モードの結果を analyze_sequential_effects で個別に可視化した後，
 #             compare_selection_modes で4条件の比較プロットを生成する
-# 出力先   : outputs/sequential_comparison_no_alias/
+# 出力先   : outputs/sequential_comparison/
 #             {degree_high,degree_low,hop_high,hop_low}/stats.jsonl 等
 #             comparison.png（4条件比較プロット）
 # 使用方法 :
@@ -24,9 +24,9 @@ echo "========================================"
 echo ""
 
 # Default parameters
-MODEL_DIR="outputs/models/gpt_small_no_alias"
-KG_DIR="data/kg/ba_no_alias"
-BASE_OUTPUT_DIR="outputs/sequential_comparison_no_alias"
+MODEL_DIR="outputs/models/gpt_small"
+KG_DIR="data/kg/ba"
+BASE_OUTPUT_DIR="outputs/sequential_comparison"
 NUM_STEPS="1000"
 NUM_RETAIN_TRIPLES="1000"
 MAX_HOP="10"  # 通常は変更不要（小規模KGでは全ノードが到達可能）

@@ -14,7 +14,7 @@
 set -e  # Exit on error
 
 # Configuration
-GRAPH_PATH="data/kg/ba_no_alias/graph.jsonl"
+GRAPH_PATH="data/kg/ba/graph.jsonl"
 OUTPUT_DIR="outputs/kg_visualizations"
 SEED=42
 

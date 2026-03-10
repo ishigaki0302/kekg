@@ -13,8 +13,8 @@ Key features:
 
 Usage:
     python -m src.scripts.run_subject_repetition_edits \
-        --model-dir outputs/models/gpt_small_no_alias \
-        --kg-dir data/kg/ba_no_alias \
+        --model-dir outputs/models/gpt_small \
+        --kg-dir data/kg/ba \
         --output-dir outputs/subject_rep/no_rep \
         --num-steps 30 \
         --repetition-count 1 \

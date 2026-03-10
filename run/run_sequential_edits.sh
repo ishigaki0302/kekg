@@ -5,14 +5,14 @@
 # 概要     : ROME 知識編集を連続して N 回実行し，編集のたびに精度・Ripple を記録する
 #             編集順序の戦略（random / degree_high / degree_low / hop_high / hop_low）
 #             を選択できる
-# 出力先   : outputs/sequential_no_alias/
+# 出力先   : outputs/sequential/
 #             (config.json, stats.jsonl, ripple_triples.jsonl, triple_acc.jsonl)
 # 使用方法 :
 #   ./run_sequential_edits.sh
 #   ./run_sequential_edits.sh --num-steps 200 --edit-selection-mode degree_high
 #   ./run_sequential_edits.sh --device cpu --seed 42
 # 次のステップ:
-#   ./run_sequential_analysis.sh --output-dir outputs/sequential_no_alias
+#   ./run_sequential_analysis.sh --output-dir outputs/sequential
 # =============================================================================
 
 set -e
@@ -22,9 +22,9 @@ echo "Sequential Knowledge Editing (ROME)"
 echo "========================================"
 
 # Default parameters
-MODEL_DIR="outputs/models/gpt_small_no_alias"
-KG_DIR="data/kg/ba_no_alias"
-OUTPUT_DIR="outputs/sequential_no_alias"
+MODEL_DIR="outputs/models/gpt_small"
+KG_DIR="data/kg/ba"
+OUTPUT_DIR="outputs/sequential"
 NUM_STEPS="100"
 NUM_EVAL_TRIPLES="1000"
 NUM_RETAIN_TRIPLES="1000"

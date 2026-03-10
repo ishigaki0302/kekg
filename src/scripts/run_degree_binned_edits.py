@@ -6,8 +6,8 @@ is selected for editing.
 
 Usage:
     python -m src.scripts.run_degree_binned_edits \
-        --model-dir outputs/models/gpt_small_no_alias \
-        --kg-dir data/kg/ba_no_alias \
+        --model-dir outputs/models/gpt_small \
+        --kg-dir data/kg/ba \
         --output-dir outputs/degree_binned/bin_0 \
         --num-steps 1000 \
         --bin-start-idx 0 \

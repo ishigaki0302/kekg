@@ -8,7 +8,7 @@
 # 出力先   : {base-dir}/comparison.png
 # 使用方法 :
 #   ./compare_results.sh
-#   ./compare_results.sh --base-dir outputs/sequential_comparison_no_alias
+#   ./compare_results.sh --base-dir outputs/sequential_comparison
 # 前提     : run_all_selection_modes.sh を先に実行しておくこと
 # =============================================================================
 
@@ -19,7 +19,7 @@ echo "Selection Mode Comparison"
 echo "========================================"
 
 # Default parameters
-BASE_DIR="outputs/sequential_comparison_no_alias"
+BASE_DIR="outputs/sequential_comparison"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do

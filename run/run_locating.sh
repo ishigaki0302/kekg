@@ -4,13 +4,13 @@
 # Category : 知識編集 - 事前分析
 # 概要     : Causal Tracing（因果追跡）をランダムサンプルに対してバッチ実行し，
 #             モデルのどの層に知識が格納されているかを特定する
-# 出力先   : outputs/locating_results_no_alias/
+# 出力先   : outputs/locating_results/
 #             (locating_summary.json, trace_*.png)
 # 使用方法 :
 #   ./run_locating.sh
 #   ./run_locating.sh --num-samples 100 --noise-level 3.0
-#   ./run_locating.sh --model-dir outputs/models/gpt_small_no_alias \
-#                     --kg-file data/kg/ba_no_alias/graph.jsonl
+#   ./run_locating.sh --model-dir outputs/models/gpt_small \
+#                     --kg-file data/kg/ba/graph.jsonl
 # =============================================================================
 
 set -e
@@ -20,10 +20,10 @@ echo "ROME Locating - Batch Causal Tracing"
 echo "========================================"
 
 # Default parameters
-MODEL_DIR="outputs/models/gpt_small_no_alias"
-KG_FILE="data/kg/ba_no_alias/graph.jsonl"
+MODEL_DIR="outputs/models/gpt_small"
+KG_FILE="data/kg/ba/graph.jsonl"
 NUM_SAMPLES=50
-OUTPUT_DIR="outputs/locating_results_no_alias"
+OUTPUT_DIR="outputs/locating_results"
 NOISE_LEVEL=3.0
 NUM_NOISE_SAMPLES=10
 SEED=42

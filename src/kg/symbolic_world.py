@@ -279,6 +279,10 @@ def build_symbolic_world(
         # match BA edge count (~n*ba_m) so density is comparable
         p = (2.0 * ba_m) / (num_entities - 1)
         g = nx.erdos_renyi_graph(num_entities, min(p, 1.0), seed=seed)
+    elif topology == "ring":
+        # ring lattice (Watts-Strogatz, no rewiring): uniform degree 2*ba_m with
+        # cyclic/geometric structure (Nishi-style), vs ER's random uniform degree.
+        g = nx.watts_strogatz_graph(num_entities, 2 * ba_m, 0.0, seed=seed)
     else:
         raise ValueError(f"Unknown topology: {topology}")
     base_graph = nx.relabel_nodes(g, {i: entities[i] for i in range(num_entities)})
@@ -365,7 +369,7 @@ def main() -> None:
     ap.add_argument("--target-generic-triples", type=int, default=24000)
     ap.add_argument("--ba-m", type=int, default=6)
     ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--topology", type=str, default="ba", choices=["ba", "er"])
+    ap.add_argument("--topology", type=str, default="ba", choices=["ba", "er", "ring"])
     ap.add_argument("--out-dir", type=str, default="data/kg/symbolic")
     args = ap.parse_args()
 

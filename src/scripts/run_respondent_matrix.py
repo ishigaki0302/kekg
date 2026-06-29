@@ -29,16 +29,20 @@ import json
 ROOT = Path(__file__).parent.parent.parent
 PY = sys.executable
 
+# 24 worlds = 3 topologies x 8 seeds. (ba_s1/ba_s2/ba_s42/er_s42 are kept so the
+# already-computed respondents are reused via the resume/skip logic.)
+_SEEDS = [1, 2, 3, 4, 5, 6, 42, 7]
 WORLDS = [
-    # (world_id, topology, seed)
-    ("ba_s42", "ba", 42),
-    ("ba_s1", "ba", 1),
-    ("ba_s2", "ba", 2),
-    ("er_s42", "er", 42),
+    (f"{topo}_s{seed}", topo, seed)
+    for topo in ("ba", "er", "ring")
+    for seed in _SEEDS
 ]
 SIZES = {
+    # tiny/large added; small/base kept identical for model reuse
+    "tiny": dict(n_layers=4, n_heads=4, d_model=128, d_mlp=512, max_seq_len=8, dropout=0.1),
     "small": dict(n_layers=6, n_heads=8, d_model=256, d_mlp=1024, max_seq_len=8, dropout=0.1),
     "base": dict(n_layers=12, n_heads=8, d_model=512, d_mlp=2048, max_seq_len=8, dropout=0.1),
+    "large": dict(n_layers=18, n_heads=10, d_model=640, d_mlp=2560, max_seq_len=8, dropout=0.1),
 }
 METHODS = ["rome", "ft", "memit", "alphaedit"]
 
@@ -120,6 +124,8 @@ def train_jobs():
     jobs = []
     for wid, topo, seed in WORLDS:
         for size in SIZES:
+            if (MODEL_DIR / f"{wid}__{size}" / "model.pt").exists():
+                continue  # skip already-trained models (resume)
             cfg = CFG_DIR / f"{wid}__{size}.yaml"
             argv = [PY, "src/cli/train_lm.py", "--config", str(cfg)]
             jobs.append((f"train__{wid}__{size}", argv))

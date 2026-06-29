@@ -49,7 +49,8 @@ def main():
     ap.add_argument("--ba-m", type=int, default=6)
     ap.add_argument("--world-seed", type=int, default=42)
     ap.add_argument("--topology", default="ba", choices=["ba", "er"])
-    ap.add_argument("--method", default="rome", choices=["rome", "ft", "memit", "alphaedit"])
+    ap.add_argument("--method", default="rome",
+                    choices=["rome", "ft", "ft_all", "memit", "alphaedit", "grace"])
     ap.add_argument("--memit-layers", default="0,1,2,3,4", help="layers for MEMIT")
     ap.add_argument("--respondent-id", default="rome_seed42_L5")
     ap.add_argument(
@@ -99,6 +100,11 @@ def main():
         editor = AlphaEditEditor(model, tok, device=device, kg_corpus_path=args.corpus,
                                  default_layer=args.layer, stats_name=stats_name,
                                  mom2_n_samples=mom2_n)
+    elif args.method == "grace":
+        from src.edit.grace_edit import GRACEEditor
+        editor = GRACEEditor(model, tok, device=device, default_layer=args.layer)
+    elif args.method == "ft_all":
+        editor = FTEditor(model, tok, device=device, default_layer=args.layer, scope="all")
     else:
         editor = FTEditor(model, tok, device=device, default_layer=args.layer)
     print(f"editor: {args.method} (edit_layers={edit_layers})")

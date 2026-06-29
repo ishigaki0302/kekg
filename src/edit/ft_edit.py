@@ -29,6 +29,7 @@ class FTEditor:
         steps: int = 100,
         default_layer: int = 0,
         weight_decay: float = 0.0,
+        scope: str = "layer",  # "layer" = blocks.{L}.ffn.w2 only; "all" = full FT
     ):
         self.original_model = model
         self.tok = tokenizer
@@ -37,6 +38,7 @@ class FTEditor:
         self.steps = steps
         self.default_layer = default_layer
         self.weight_decay = weight_decay
+        self.scope = scope
 
     @torch.no_grad()
     def _predict(self, model, s: str, r: str) -> str:
@@ -57,11 +59,12 @@ class FTEditor:
 
         orig_pred = self._predict(model, s, r)
 
-        # train only blocks.{L}.ffn.w2 (same target as ROME)
+        # scope="layer": only blocks.{L}.ffn.w2 (ROME-comparable);
+        # scope="all": full fine-tuning (all parameters)
         target_key = f"blocks.{L}.ffn.w2"
         train_params = []
         for n, p in model.named_parameters():
-            train = target_key in n
+            train = (self.scope == "all") or (target_key in n)
             p.requires_grad_(train)
             if train:
                 train_params.append(p)

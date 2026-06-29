@@ -37,14 +37,18 @@ WORLDS = [
     for topo in ("ba", "er", "ring")
     for seed in _SEEDS
 ]
-SIZES = {
-    # tiny/large added; small/base kept identical for model reuse
+SIZES = {  # 8 sizes (depth x width); small/base identical to existing for reuse
     "tiny": dict(n_layers=4, n_heads=4, d_model=128, d_mlp=512, max_seq_len=8, dropout=0.1),
+    "xs": dict(n_layers=4, n_heads=8, d_model=256, d_mlp=1024, max_seq_len=8, dropout=0.1),
     "small": dict(n_layers=6, n_heads=8, d_model=256, d_mlp=1024, max_seq_len=8, dropout=0.1),
+    "small-wide": dict(n_layers=6, n_heads=8, d_model=512, d_mlp=2048, max_seq_len=8, dropout=0.1),
     "base": dict(n_layers=12, n_heads=8, d_model=512, d_mlp=2048, max_seq_len=8, dropout=0.1),
+    "base-wide": dict(n_layers=12, n_heads=12, d_model=768, d_mlp=3072, max_seq_len=8, dropout=0.1),
     "large": dict(n_layers=18, n_heads=10, d_model=640, d_mlp=2560, max_seq_len=8, dropout=0.1),
+    "xl": dict(n_layers=24, n_heads=12, d_model=768, d_mlp=3072, max_seq_len=8, dropout=0.1),
 }
-METHODS = ["rome", "ft", "memit", "alphaedit"]
+# KN / PMET added later (resume fills them in)
+METHODS = ["rome", "ft", "ft_all", "memit", "alphaedit", "grace"]
 
 WORLD_DIR = ROOT / "outputs/symbolic"
 CFG_DIR = ROOT / "outputs/respondents/configs"

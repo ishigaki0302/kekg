@@ -26,7 +26,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score
-from sklearn.preprocessing import StandardScaler
+from scipy.stats import chi2
 
 
 def load(csv_path):
@@ -55,7 +55,11 @@ def zscore_within_world(rows, key):
         r[key + "_z"] = (r[key] - m) / s if not np.isnan(r[key]) else 0.0
 
 
-def build_design(rows, categories, rules, respondents, use_structure=True):
+def build_design(rows, categories, rules, respondents, use_structure=True,
+                 edit_keys=None):
+    """edit_keys (testlet FE): list of unique world/edit_id; absorbs per-edit
+    difficulty and local dependence within an edit's item battery."""
+    ek_index = {k: i for i, k in enumerate(edit_keys)} if edit_keys else {}
     X, y = [], []
     for r in rows:
         feat = []
@@ -65,6 +69,11 @@ def build_design(rows, categories, rules, respondents, use_structure=True):
         # respondent fixed effects (drop first)
         for rid in respondents[1:]:
             feat.append(1.0 if r["respondent_id"] == rid else 0.0)
+        # edit-testlet fixed effects (drop first)
+        if edit_keys:
+            ek = f"{r['world']}/{r['edit_id']}"
+            for k in edit_keys[1:]:
+                feat.append(1.0 if ek == k else 0.0)
         if use_structure:
             feat.append(r["victim_degree_z"])
             hop = r["hop_from_edit"]
@@ -117,16 +126,34 @@ def main():
     rules = sorted({r["rule_type"] for r in rows})
     respondents = sorted({r["respondent_id"] for r in rows})
 
-    # SQ2: model comparison (full vs reduced) via CV log-loss
-    Xf, y = build_design(rows, categories, rules, respondents, use_structure=True)
-    Xr, _ = build_design(rows, categories, rules, respondents, use_structure=False)
-    clf = LogisticRegression(C=1e6, max_iter=3000)
+    # edit-testlet keys (world/edit_id), absorbs per-edit difficulty + local dep.
+    edit_keys = sorted({f"{r['world']}/{r['edit_id']}" for r in rows})
+    print(f"edit-testlets: {len(edit_keys)}")
+
+    # SQ2: full vs reduced, with edit-testlet FE. CV log-loss + likelihood-ratio test.
+    Xf, y = build_design(rows, categories, rules, respondents,
+                         use_structure=True, edit_keys=edit_keys)
+    Xr, _ = build_design(rows, categories, rules, respondents,
+                         use_structure=False, edit_keys=edit_keys)
+    clf = LogisticRegression(C=1e6, max_iter=4000)
     ll_full = -cross_val_score(clf, Xf, y, cv=5, scoring="neg_log_loss").mean()
     ll_red = -cross_val_score(clf, Xr, y, cv=5, scoring="neg_log_loss").mean()
-    print("\n=== SQ2: does structure add predictive value? (5-fold CV log-loss) ===")
-    print(f"  reduced (category + respondent): {ll_red:.4f}")
-    print(f"  full   (+ victim_degree, hop, rule): {ll_full:.4f}")
-    print(f"  improvement: {ll_red - ll_full:+.4f} (positive = structure helps)")
+
+    def loglik(X):
+        m = LogisticRegression(C=1e6, max_iter=4000).fit(X, y)
+        p = np.clip(m.predict_proba(X)[:, 1], 1e-9, 1 - 1e-9)
+        return np.sum(y * np.log(p) + (1 - y) * np.log(1 - p))
+
+    ll_f_in, ll_r_in = loglik(Xf), loglik(Xr)
+    lr_stat = 2 * (ll_f_in - ll_r_in)
+    df = Xf.shape[1] - Xr.shape[1]
+    pval = chi2.sf(lr_stat, df)
+
+    print("\n=== SQ2: does structure add predictive value? (with edit-testlet FE) ===")
+    print(f"  reduced (category + respondent + edit): CV log-loss {ll_red:.4f}")
+    print(f"  full   (+ victim_degree, hop, rule):    CV log-loss {ll_full:.4f}")
+    print(f"  CV improvement: {ll_red - ll_full:+.4f} (positive = structure helps)")
+    print(f"  Likelihood-ratio test: chi2={lr_stat:.1f}, df={df}, p={pval:.2e}")
 
     # per-category victim-degree slope with bootstrap CI (the central signal)
     print("\n=== victim_degree_z slope by category (logistic, within-respondent) ===")

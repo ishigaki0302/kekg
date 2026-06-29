@@ -160,7 +160,8 @@ class ROME:
         v_num_grad_steps: int = 20,
         v_weight_decay: float = 0.5,
         kl_factor: float = 0.0625,
-        clamp_norm_factor: float = 4.0
+        clamp_norm_factor: float = 4.0,
+        stats_name: str = "gpt_mini",
     ):
         """
         Initialize ROME editor.
@@ -182,6 +183,13 @@ class ROME:
         """
         self.original_model = model
         self.model = ModelWrapper(model)
+        # Unique stats cache key per model: the mom2 (C) cache path is keyed by
+        # this name, so distinct worlds/sizes must NOT share it (different C and
+        # different d_mlp would otherwise collide / dimension-mismatch).
+        # NOTE: copy_model=True builds a fresh ModelWrapper whose
+        # ModelConfigWrapper resets _name_or_path; apply_edit re-applies it.
+        self._stats_name = stats_name
+        self.model.config._name_or_path = stats_name
         self.original_tokenizer = tokenizer
         self.tokenizer = TokenizerWrapper(tokenizer)
         self.device = device
@@ -332,6 +340,9 @@ class ROME:
 
         # Copy model if requested
         model_to_edit = ModelWrapper(deepcopy(self.original_model)) if copy_model else self.model
+        # Re-apply unique stats cache key (a fresh ModelWrapper resets it to the
+        # hardcoded default), so mom2 C is keyed per (world, size).
+        model_to_edit.config._name_or_path = self._stats_name
 
         # Apply ROME using reference implementation
         edited_model, _ = apply_rome_to_model(

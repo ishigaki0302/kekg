@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+"""Run editing-plasticity evaluation -> long-format response matrix (for IRT).
+
+Example:
+  uv run python src/scripts/run_plasticity_eval.py \
+      --model-dir outputs/models/symbolic_main_seed42 \
+      --config configs/train_symbolic_main.yaml \
+      --corpus outputs/symbolic/main/corpus.train.txt \
+      --func-map outputs/symbolic/main/func_map.json \
+      --layer 5 --n-per-bin 5 \
+      --out outputs/plasticity/responses_rome_L5.csv
+"""
+
+import argparse
+import csv
+from collections import defaultdict
+from pathlib import Path
+import sys
+
+import torch
+
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+from src.edit.rome import ROME
+from src.edit.ft_edit import FTEditor
+from src.eval.plasticity_eval import (
+    load_respondent,
+    rebuild_world,
+    sample_edits,
+    evaluate_edit,
+)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--model-dir", required=True)
+    ap.add_argument("--config", required=True)
+    ap.add_argument("--corpus", required=True, help="KG corpus for ROME mom2 stats")
+    ap.add_argument("--func-map", required=True)
+    ap.add_argument("--layer", type=int, default=5)
+    ap.add_argument("--n-per-bin", type=int, default=5)
+    ap.add_argument("--max-invariant", type=int, default=20)
+    ap.add_argument("--edit-seed", type=int, default=0)
+    ap.add_argument("--out", required=True)
+    # world params (must match generation)
+    ap.add_argument("--num-entities", type=int, default=1200)
+    ap.add_argument("--num-generic-relations", type=int, default=50)
+    ap.add_argument("--target-generic-triples", type=int, default=24000)
+    ap.add_argument("--ba-m", type=int, default=6)
+    ap.add_argument("--world-seed", type=int, default=42)
+    ap.add_argument("--topology", default="ba", choices=["ba", "er"])
+    ap.add_argument("--method", default="rome", choices=["rome", "ft"])
+    ap.add_argument("--respondent-id", default="rome_seed42_L5")
+    ap.add_argument(
+        "--mom2-n-samples", type=int, default=-1,
+        help="ROME second-moment (C) samples. -1 = use the FULL known corpus "
+             "(exact C over all facts; the controlled-world rigor upgrade).",
+    )
+    args = ap.parse_args()
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"device={device}")
+
+    # Exact C over the complete known knowledge set (vs Wikipedia estimate).
+    corpus_size = sum(1 for ln in open(args.corpus, encoding="utf-8") if ln.strip())
+    mom2_n = corpus_size if args.mom2_n_samples < 0 else args.mom2_n_samples
+    print(f"corpus facts={corpus_size} | mom2_n_samples={mom2_n} "
+          f"({'EXACT full-corpus C' if mom2_n >= corpus_size else 'sampled C'})")
+
+    model, tok = load_respondent(args.model_dir, args.config, device)
+    print("respondent loaded")
+
+    world = rebuild_world(
+        dict(
+            num_entities=args.num_entities,
+            num_generic_relations=args.num_generic_relations,
+            target_generic_triples=args.target_generic_triples,
+            ba_m=args.ba_m,
+            seed=args.world_seed,
+            topology=args.topology,
+        ),
+        func_map_path=args.func_map,
+    )
+    print("world rebuilt (func_map matches saved)")
+
+    if args.method == "rome":
+        # unique stats cache per (world, size) to avoid C cross-contamination
+        stats_name = args.respondent_id.replace("__rome", "").replace("__ft", "")
+        editor = ROME(model, tok, device=device, kg_corpus_path=args.corpus,
+                      mom2_n_samples=mom2_n, stats_name=stats_name)
+    else:
+        editor = FTEditor(model, tok, device=device, default_layer=args.layer)
+    print(f"editor: {args.method}")
+
+    plans = sample_edits(world, n_per_bin=args.n_per_bin, seed=args.edit_seed)
+    print(f"edits planned: {len(plans)} ({args.n_per_bin}/bin)")
+
+    all_rows = []
+    n_success = 0
+    for i, plan in enumerate(plans):
+        rows, ok = evaluate_edit(
+            editor, tok, world, plan, layer=args.layer, device=device,
+            max_invariant=args.max_invariant, item_rng_seed=args.edit_seed + i,
+        )
+        for row in rows:
+            row["respondent_id"] = args.respondent_id
+            row["edit_id"] = f"e{i:04d}"
+        all_rows.extend(rows)
+        n_success += int(ok)
+        print(f"[{i+1}/{len(plans)}] s={plan.s} bin={plan.degree_bin} "
+              f"edit_success={ok} items={len(rows)}")
+
+    # write CSV
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fields = [
+        "respondent_id", "edit_id", "edit_s", "edit_o_new", "edit_degree_bin",
+        "edit_success", "item_s", "item_r", "category", "rule_type",
+        "victim_degree", "hop_from_edit", "edit_subject_degree", "correct",
+    ]
+    with out.open("w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=fields)
+        w.writeheader()
+        w.writerows(all_rows)
+
+    # summary
+    print("\n=== SUMMARY ===")
+    print(f"edits: {len(plans)} | edit_success_rate: {n_success/max(1,len(plans)):.3f}")
+    by_cat = defaultdict(lambda: [0, 0])
+    for r in all_rows:
+        by_cat[r["category"]][0] += r["correct"]
+        by_cat[r["category"]][1] += 1
+    print("per-category accuracy (correct/total):")
+    for cat, (c, n) in sorted(by_cat.items()):
+        print(f"  {cat:20s} {c/n:.3f}  ({c}/{n})")
+    # direct success by degree bin
+    by_bin = defaultdict(lambda: [0, 0])
+    for r in all_rows:
+        if r["category"] == "direct":
+            by_bin[r["edit_degree_bin"]][0] += r["correct"]
+            by_bin[r["edit_degree_bin"]][1] += 1
+    print("direct (edit) success by edit-degree bin:")
+    for b, (c, n) in sorted(by_bin.items()):
+        print(f"  {b:6s} {c/n:.3f}  ({c}/{n})")
+    print(f"\nwrote {len(all_rows)} rows -> {out}")
+
+
+if __name__ == "__main__":
+    main()

@@ -229,6 +229,72 @@ def write_jsonl(triples: List[Triple], path: Path) -> None:
             f.write(json.dumps(t.to_dict(), ensure_ascii=False) + "\n")
 
 
+def generate_er_kg(
+    num_entities: int,
+    num_relations: int,
+    target_triples: int = 30000,
+    seed: int = 42,
+    ensure_exact: bool = True,
+) -> List[Triple]:
+    """
+    Erdős–Rényi ランダムグラフからトリプルを生成する（BA との対照実験用）。
+
+    BA と同じ entity 数・edge 密度だが degree 分布が均一（ポアソン）。
+    """
+    rng = np.random.default_rng(seed)
+    py_rng = random.Random(seed)
+
+    entities = [f"E_{i:04d}" for i in range(num_entities)]
+    relations = [f"R_{i:03d}" for i in range(num_relations)]
+
+    # BA と同じ edge 密度を実現するための p を計算
+    # 期待される edge 数 = C(n,2) * p = target_triples
+    n = num_entities
+    p = target_triples / (n * (n - 1))  # directed edges
+    p = min(p, 1.0)
+
+    # ER directed graph
+    G = nx.erdos_renyi_graph(n, p, seed=seed, directed=True)
+
+    triples: List[Triple] = []
+    edge_set: Set[Tuple[str, str, str]] = set()
+
+    for u, v in G.edges():
+        r = relations[int(rng.integers(0, num_relations))]
+        t = Triple(s=entities[u], r=r, o=entities[v])
+        key = (t.s, t.r, t.o)
+        if key not in edge_set:
+            triples.append(t)
+            edge_set.add(key)
+
+    if not ensure_exact:
+        return triples
+
+    # target に揃える
+    if len(triples) > target_triples:
+        py_rng.shuffle(triples)
+        triples = triples[:target_triples]
+        return triples
+
+    # 足りない場合: ランダムに追加（uniform sampling = ER の性質を保持）
+    max_trials = 5_000_000
+    trials = 0
+    while len(triples) < target_triples and trials < max_trials:
+        trials += 1
+        u = int(rng.integers(0, num_entities))
+        v = int(rng.integers(0, num_entities))
+        if u == v:
+            continue
+        r = relations[int(rng.integers(0, num_relations))]
+        key = (entities[u], r, entities[v])
+        if key in edge_set:
+            continue
+        triples.append(Triple(s=entities[u], r=r, o=entities[v]))
+        edge_set.add(key)
+
+    return triples
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--num-entities", type=int, default=1200)

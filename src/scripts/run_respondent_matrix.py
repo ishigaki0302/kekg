@@ -40,7 +40,7 @@ SIZES = {
     "small": dict(n_layers=6, n_heads=8, d_model=256, d_mlp=1024, max_seq_len=8, dropout=0.1),
     "base": dict(n_layers=12, n_heads=8, d_model=512, d_mlp=2048, max_seq_len=8, dropout=0.1),
 }
-METHODS = ["rome", "ft"]
+METHODS = ["rome", "ft", "memit", "alphaedit"]
 
 WORLD_DIR = ROOT / "outputs/symbolic"
 CFG_DIR = ROOT / "outputs/respondents/configs"
@@ -136,6 +136,8 @@ def eval_jobs():
             fmap = WORLD_DIR / wid / "func_map.json"
             for method in METHODS:
                 rid = f"{wid}__{size}__{method}"
+                if (RESP_DIR / f"{rid}.csv").exists():
+                    continue  # skip already-computed respondents (resume)
                 argv = [
                     PY, "src/scripts/run_plasticity_eval.py",
                     "--model-dir", str(mdir), "--config", str(cfg),

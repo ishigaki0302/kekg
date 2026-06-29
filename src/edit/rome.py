@@ -207,22 +207,25 @@ class ROME:
         # Initialize causal tracer
         self.tracer = CausalTracer(model, tokenizer, device)
 
-    def _create_hparams(self, layer: int) -> ROMEHyperParams:
+    def _create_hparams(self, layer) -> ROMEHyperParams:
         """
         Create ROME hyperparameters for our model.
 
         Args:
-            layer: Layer to edit
+            layer: int (single-layer ROME) or list[int] (multi-layer = MEMIT).
+                   The vendored execute_rome iterates over hparams.layers, so a
+                   list spreads rank-1 updates across the layer range (MEMIT).
 
         Returns:
             ROMEHyperParams instance
         """
+        layers = [layer] if isinstance(layer, int) else list(layer)
         hparams_dict = {
-            "layers": [layer],
+            "layers": layers,
             "fact_token": "subject_last",
             "v_num_grad_steps": self.v_num_grad_steps,
             "v_lr": self.v_lr,
-            "v_loss_layer": layer,  # Use same layer for loss
+            "v_loss_layer": max(layers),  # deepest edited layer for the loss
             "v_weight_decay": self.v_weight_decay,
             "clamp_norm_factor": self.clamp_norm_factor,
             "kl_factor": self.kl_factor,
@@ -295,17 +298,19 @@ class ROME:
         r: str,
         o_target: str,
         layer: Optional[int] = None,
-        copy_model: bool = False
+        copy_model: bool = False,
+        layers: Optional[List[int]] = None,
     ) -> Tuple[nn.Module, EditResult]:
         """
-        Apply a ROME edit to the model.
+        Apply a ROME (single-layer) or MEMIT (multi-layer) edit to the model.
 
         Args:
             s: Subject
             r: Relation
             o_target: Target object
-            layer: Layer to edit (if None, automatically locate)
+            layer: Layer to edit (if None and ``layers`` is None, auto-locate)
             copy_model: Whether to copy model before editing
+            layers: list of layers -> MEMIT-style multi-layer edit (overrides layer)
 
         Returns:
             Tuple of (edited_model, edit_result)
@@ -320,8 +325,10 @@ class ROME:
             orig_pred_id = torch.argmax(logits).item()
             orig_pred = self.original_tokenizer.get_token(orig_pred_id)
 
-        # Locate layer if not provided
-        if layer is None:
+        # Determine layer(s) to edit
+        if layers is not None:
+            layer = layers  # MEMIT: list passed to _create_hparams
+        elif layer is None:
             layer = self.locate_important_layer(s, r, o_target)
 
         # Create request for reference implementation

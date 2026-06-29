@@ -130,11 +130,20 @@ def evaluate_edit(
     device: str,
     max_invariant: int = 20,
     item_rng_seed: int = 0,
+    edit_layers: Optional[List[int]] = None,
 ) -> (List[Dict], bool):
-    """Apply one ROME edit (on a fresh copy) and score its item battery."""
-    edited_model, res = rome.apply_edit(
-        plan.s, R_F, plan.o_new, layer=layer, copy_model=True
-    )
+    """Apply one edit (on a fresh copy) and score its item battery.
+
+    edit_layers (list) -> MEMIT-style multi-layer edit via ROME; else single layer.
+    """
+    if edit_layers is not None:
+        edited_model, res = rome.apply_edit(
+            plan.s, R_F, plan.o_new, layers=edit_layers, copy_model=True
+        )
+    else:
+        edited_model, res = rome.apply_edit(
+            plan.s, R_F, plan.o_new, layer=layer, copy_model=True
+        )
     items = world.build_item_battery(
         plan.s, plan.o_new, max_invariant=max_invariant, rng=random.Random(item_rng_seed)
     )

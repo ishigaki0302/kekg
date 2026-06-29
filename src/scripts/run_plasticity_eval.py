@@ -49,7 +49,8 @@ def main():
     ap.add_argument("--ba-m", type=int, default=6)
     ap.add_argument("--world-seed", type=int, default=42)
     ap.add_argument("--topology", default="ba", choices=["ba", "er"])
-    ap.add_argument("--method", default="rome", choices=["rome", "ft"])
+    ap.add_argument("--method", default="rome", choices=["rome", "ft", "memit", "alphaedit"])
+    ap.add_argument("--memit-layers", default="0,1,2,3,4", help="layers for MEMIT")
     ap.add_argument("--respondent-id", default="rome_seed42_L5")
     ap.add_argument(
         "--mom2-n-samples", type=int, default=-1,
@@ -83,14 +84,24 @@ def main():
     )
     print("world rebuilt (func_map matches saved)")
 
-    if args.method == "rome":
-        # unique stats cache per (world, size) to avoid C cross-contamination
-        stats_name = args.respondent_id.replace("__rome", "").replace("__ft", "")
+    # unique stats cache per (world, size) to avoid C cross-contamination
+    stats_name = args.respondent_id
+    for suf in ("__rome", "__ft", "__memit", "__alphaedit"):
+        stats_name = stats_name.replace(suf, "")
+    edit_layers = None
+    if args.method in ("rome", "memit"):
         editor = ROME(model, tok, device=device, kg_corpus_path=args.corpus,
                       mom2_n_samples=mom2_n, stats_name=stats_name)
+        if args.method == "memit":
+            edit_layers = [int(x) for x in args.memit_layers.split(",")]
+    elif args.method == "alphaedit":
+        from src.edit.alpha_edit import AlphaEditEditor
+        editor = AlphaEditEditor(model, tok, device=device, kg_corpus_path=args.corpus,
+                                 default_layer=args.layer, stats_name=stats_name,
+                                 mom2_n_samples=mom2_n)
     else:
         editor = FTEditor(model, tok, device=device, default_layer=args.layer)
-    print(f"editor: {args.method}")
+    print(f"editor: {args.method} (edit_layers={edit_layers})")
 
     plans = sample_edits(world, n_per_bin=args.n_per_bin, seed=args.edit_seed)
     print(f"edits planned: {len(plans)} ({args.n_per_bin}/bin)")
@@ -101,6 +112,7 @@ def main():
         rows, ok = evaluate_edit(
             editor, tok, world, plan, layer=args.layer, device=device,
             max_invariant=args.max_invariant, item_rng_seed=args.edit_seed + i,
+            edit_layers=edit_layers,
         )
         for row in rows:
             row["respondent_id"] = args.respondent_id

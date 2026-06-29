@@ -1,0 +1,27 @@
+# GPT Mini Training Configuration — ER (Erdős–Rényi) control experiment
+
+model:
+  n_layers: 12
+  n_heads: 8
+  d_model: 512
+  d_mlp: 2048
+  max_seq_len: 8
+  dropout: 0.1
+
+train:
+  batch_size: 256
+  lr: 3.0e-4
+  weight_decay: 0.01
+  epochs: 100
+  warmup_steps: 1000
+  grad_clip: 1.0
+  eval_interval: 500
+  save_interval: 2000
+
+data:
+  train_path: data/kg/er/corpus.train.txt
+  eval_all_path: data/kg/er/corpus.train.txt
+
+output_dir: outputs/models/gpt_small_er
+
+seed: 17

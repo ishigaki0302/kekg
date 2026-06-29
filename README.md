@@ -189,10 +189,8 @@ kekg/
 
 ## テスト
 
-EasyEdit conda 環境でテストを実行：
-
 ```bash
-/opt/conda/envs/EasyEdit/bin/python -m pytest tests/ -v
+uv run pytest tests/ -v
 ```
 
 | テストファイル | 内容 |
@@ -208,6 +206,27 @@ EasyEdit conda 環境でテストを実行：
 ---
 
 ## インストール
+
+### uv（推奨）
+
+```bash
+# uv がなければインストール
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 仮想環境 + 全依存パッケージを一括セットアップ
+uv sync
+
+# テスト・フォーマッタも入れる場合
+uv sync --extra dev
+
+# 実行
+uv run python src/kg/generator.py --num-entities 1200
+uv run pytest tests/ -v
+```
+
+詳細は [docs/setup-uv.md](docs/setup-uv.md) を参照。
+
+### pip
 
 ```bash
 pip install -r requirements.txt

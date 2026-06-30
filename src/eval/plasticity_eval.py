@@ -131,11 +131,16 @@ def evaluate_edit(
     max_invariant: int = 20,
     item_rng_seed: int = 0,
     edit_layers: Optional[List[int]] = None,
-) -> (List[Dict], bool):
+) -> (List[Dict], bool, float):
     """Apply one edit (on a fresh copy) and score its item battery.
 
     edit_layers (list) -> MEMIT-style multi-layer edit via ROME; else single layer.
+    Returns (rows, edit_success, edit_time_s) — edit_time for Efficiency.
     """
+    import time
+    if device.startswith("cuda"):
+        torch.cuda.synchronize()
+    _t0 = time.perf_counter()
     if edit_layers is not None:
         edited_model, res = rome.apply_edit(
             plan.s, R_F, plan.o_new, layers=edit_layers, copy_model=True
@@ -144,6 +149,9 @@ def evaluate_edit(
         edited_model, res = rome.apply_edit(
             plan.s, R_F, plan.o_new, layer=layer, copy_model=True
         )
+    if device.startswith("cuda"):
+        torch.cuda.synchronize()
+    edit_time_s = time.perf_counter() - _t0
     items = world.build_item_battery(
         plan.s, plan.o_new, max_invariant=max_invariant, rng=random.Random(item_rng_seed)
     )
@@ -170,4 +178,4 @@ def evaluate_edit(
     del edited_model
     if device.startswith("cuda"):
         torch.cuda.empty_cache()
-    return rows, res.success
+    return rows, res.success, edit_time_s

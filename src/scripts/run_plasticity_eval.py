@@ -124,8 +124,9 @@ def main():
 
     all_rows = []
     n_success = 0
+    edit_times = []
     for i, plan in enumerate(plans):
-        rows, ok = evaluate_edit(
+        rows, ok, dt = evaluate_edit(
             editor, tok, world, plan, layer=args.layer, device=device,
             max_invariant=args.max_invariant, item_rng_seed=args.edit_seed + i,
             edit_layers=edit_layers,
@@ -135,8 +136,21 @@ def main():
             row["edit_id"] = f"e{i:04d}"
         all_rows.extend(rows)
         n_success += int(ok)
+        edit_times.append(dt)
         print(f"[{i+1}/{len(plans)}] s={plan.s} bin={plan.degree_bin} "
-              f"edit_success={ok} items={len(rows)}")
+              f"edit_success={ok} items={len(rows)} t={dt:.2f}s")
+
+    # Efficiency summary (separate file -> does not change the matrix schema)
+    import statistics
+    eff_dir = Path(args.out).parent.parent / "efficiency"
+    eff_dir.mkdir(parents=True, exist_ok=True)
+    with (eff_dir / f"{args.respondent_id}.csv").open("w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["respondent_id", "method", "n_edits", "mean_edit_s", "median_edit_s", "total_edit_s"])
+        w.writerow([args.respondent_id, args.method, len(edit_times),
+                    f"{statistics.mean(edit_times):.4f}",
+                    f"{statistics.median(edit_times):.4f}",
+                    f"{sum(edit_times):.2f}"])
 
     # write CSV
     out = Path(args.out)

@@ -51,7 +51,7 @@ def main():
     ap.add_argument("--topology", default="ba", choices=["ba", "er"])
     ap.add_argument("--method", default="rome",
                     choices=["rome", "ft", "ft_all", "memit", "alphaedit",
-                             "grace", "kn", "pmet"])
+                             "grace", "kn", "pmet", "mend", "ke"])
     ap.add_argument("--memit-layers", default="0,1,2,3,4", help="layers for MEMIT")
     ap.add_argument("--respondent-id", default="rome_seed42_L5")
     ap.add_argument(
@@ -87,9 +87,8 @@ def main():
     print("world rebuilt (func_map matches saved)")
 
     # unique stats cache per (world, size) to avoid C cross-contamination
-    stats_name = args.respondent_id
-    for suf in ("__rome", "__ft", "__memit", "__alphaedit"):
-        stats_name = stats_name.replace(suf, "")
+    # respondent_id = "<world>__<size>__<method>" -> stats_name = "<world>__<size>"
+    stats_name = "__".join(args.respondent_id.split("__")[:2])
     edit_layers = None
     if args.method in ("rome", "memit", "pmet"):
         # PMET-style = multi-layer FFN edit with more v-optimisation steps
@@ -115,6 +114,19 @@ def main():
         editor = GRACEEditor(model, tok, device=device, default_layer=args.layer)
     elif args.method == "ft_all":
         editor = FTEditor(model, tok, device=device, default_layer=args.layer, scope="all")
+    elif args.method in ("mend", "ke"):
+        # learned editors: load the pre-trained per-model editor weights
+        import os
+        ed_path = f"outputs/respondents/editors/{stats_name}__{args.method}.pt"
+        if not os.path.exists(ed_path):
+            raise SystemExit(f"editor not trained: {ed_path} (run train_editors.py first)")
+        if args.method == "mend":
+            from src.edit.mend_edit import MENDEditor
+            editor = MENDEditor(model, tok, device=device, default_layer=args.layer)
+        else:
+            from src.edit.ke_edit import KEEditor
+            editor = KEEditor(model, tok, device=device, default_layer=args.layer)
+        editor.load(ed_path)
     else:
         editor = FTEditor(model, tok, device=device, default_layer=args.layer)
     print(f"editor: {args.method} (edit_layers={edit_layers})")

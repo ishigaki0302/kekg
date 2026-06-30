@@ -62,8 +62,14 @@ def gen_relation(k: int) -> str:
     return f"R_gen_{k:03d}"
 
 
+def rf_alias(k: int) -> str:
+    """k-th surface alias of the functional relation R_F (for Generality)."""
+    return f"{R_F}__a{k}"
+
+
 # --- logical categories of an evaluation item --------------------------------
 CAT_DIRECT = "direct"
+CAT_GENERALITY = "generality"  # edit queried via an R_F alias (paraphrase)
 CAT_LOGICAL = "logical"  # newly entailed by closure
 CAT_CONTRADICTED = "contradicted"  # true in G, false in G'
 CAT_INVARIANT = "invariant"  # logically independent, must stay
@@ -116,6 +122,7 @@ class SymbolicWorld:
     func_map: Dict[str, str]  # R_F: entity -> its single object
     generic_triples: List[Triple]  # rule-free typed edges (invariant family)
     base_graph: nx.Graph  # undirected BA substrate (for degree + hop)
+    n_rf_aliases: int = 0  # # of R_F surface aliases (Generality); 0 = none
 
     # ------------------------------------------------------------------ core
     def degree(self, e: str) -> int:
@@ -201,6 +208,10 @@ class SymbolicWorld:
         # direct -----------------------------------------------------------
         add_positive(s, R_F, o_new, CAT_DIRECT, R_F)
 
+        # generality: same edit queried via R_F alias surface forms
+        for k in range(self.n_rf_aliases):
+            add_positive(s, rf_alias(k), o_new, CAT_GENERALITY, "R_F_alias")
+
         # logical consequence (newly entailed positive facts) --------------
         for (qs, qr, qo) in sorted(added):
             add_positive(qs, qr, qo, CAT_LOGICAL, qr)
@@ -256,6 +267,7 @@ def build_symbolic_world(
     ba_m: int = 6,
     seed: int = 42,
     topology: str = "ba",
+    num_rf_aliases: int = 0,
 ) -> SymbolicWorld:
     """Build a symbolic world with a degree substrate + logical overlay.
 
@@ -339,12 +351,20 @@ def build_symbolic_world(
         func_map=func_map,
         generic_triples=generic,
         base_graph=base_graph,
+        n_rf_aliases=num_rf_aliases,
     )
 
 
 def world_to_triples(world: SymbolicWorld) -> List[Triple]:
-    """All training triples = closure facts (R_F, R_Finv, R_C) + generic."""
+    """All training triples = closure facts (R_F, R_Finv, R_C) + generic.
+
+    If the world has R_F aliases, each functional fact is also stated under every
+    alias surface form so the model learns the aliases are equivalent (Generality).
+    """
     triples: List[Triple] = []
+    for s, o in world.func_map.items():
+        for k in range(world.n_rf_aliases):
+            triples.append(Triple(s=s, r=rf_alias(k), o=o))
     for (s, r, o) in sorted(world.closure()):
         triples.append(Triple(s=s, r=r, o=o))
     return triples

@@ -48,7 +48,7 @@ def main():
     ap.add_argument("--target-generic-triples", type=int, default=24000)
     ap.add_argument("--ba-m", type=int, default=6)
     ap.add_argument("--world-seed", type=int, default=42)
-    ap.add_argument("--topology", default="ba", choices=["ba", "er"])
+    ap.add_argument("--topology", default="ba", choices=["ba", "er", "ring"])
     ap.add_argument("--method", default="rome",
                     choices=["rome", "ft", "ft_all", "memit", "alphaedit",
                              "grace", "kn", "pmet", "mend", "ke"])
@@ -86,9 +86,10 @@ def main():
     )
     print("world rebuilt (func_map matches saved)")
 
-    # unique stats cache per (world, size) to avoid C cross-contamination
-    # respondent_id = "<world>__<size>__<method>" -> stats_name = "<world>__<size>"
-    stats_name = "__".join(args.respondent_id.split("__")[:2])
+    # unique stats cache per respondent (world__size__method) — avoids both
+    # cross-model d_mlp collision AND concurrent-write races on the C .npz when
+    # multiple C-using methods of the same model run in parallel.
+    stats_name = args.respondent_id
     edit_layers = None
     if args.method in ("rome", "memit", "pmet"):
         # PMET-style = multi-layer FFN edit with more v-optimisation steps

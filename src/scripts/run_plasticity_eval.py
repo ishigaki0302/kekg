@@ -129,6 +129,8 @@ def main():
         editor.load(ed_path)
     else:
         editor = FTEditor(model, tok, device=device, default_layer=args.layer)
+    if edit_layers is not None:  # clamp to model depth (tiny/xs have few layers)
+        edit_layers = [L for L in edit_layers if L < model.config.n_layers]
     print(f"editor: {args.method} (edit_layers={edit_layers})")
 
     plans = sample_edits(world, n_per_bin=args.n_per_bin, seed=args.edit_seed)

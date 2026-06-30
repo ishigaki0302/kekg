@@ -93,9 +93,11 @@ def write_configs():
 
 
 def gpu_pool(jobs, gpus):
-    """jobs: list of (name, argv). Run with <=len(gpus) concurrent, pinned."""
+    """jobs: list of (name, argv). Run len(gpus) concurrent (gpus may repeat to
+    pack multiple jobs per physical GPU). Tracks every running job (NOT keyed by
+    gpu) so concurrency == len(gpus)."""
     free = list(gpus)
-    running = {}  # gpu -> (proc, name, logfile)
+    running = []  # list of (proc, name, logfile, gpu)
     pending = list(jobs)
     failed = []
     while pending or running:
@@ -104,20 +106,23 @@ def gpu_pool(jobs, gpus):
             name, argv = pending.pop(0)
             logf = open(LOG_DIR / f"{name}.log", "w")
             env = {**os.environ, "CUDA_VISIBLE_DEVICES": str(gpu)}
-            print(f"[launch gpu{gpu}] {name}")
-            running[gpu] = (subprocess.Popen(argv, env=env, stdout=logf,
+            print(f"[launch gpu{gpu}] {name}", flush=True)
+            running.append((subprocess.Popen(argv, env=env, stdout=logf,
                                              stderr=subprocess.STDOUT, cwd=str(ROOT)),
-                            name, logf)
+                            name, logf, gpu))
         time.sleep(3)
-        for gpu, (p, name, logf) in list(running.items()):
-            if p.poll() is not None:
+        still = []
+        for (p, name, logf, gpu) in running:
+            if p.poll() is None:
+                still.append((p, name, logf, gpu))
+            else:
                 logf.close()
                 rc = p.returncode
-                print(f"[done gpu{gpu}] {name} rc={rc}")
+                print(f"[done gpu{gpu}] {name} rc={rc}", flush=True)
                 if rc != 0:
                     failed.append(name)
-                del running[gpu]
                 free.append(gpu)
+        running = still
     if failed:
         print(f"[WARN] failed jobs: {failed}")
     return failed

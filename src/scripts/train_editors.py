@@ -82,7 +82,7 @@ def main():
 
     gpus = [int(x) for x in args.gpus.split(",")] * args.slots_per_gpu
     free = list(gpus)
-    running = {}
+    running = []  # (proc, name, lf, gpu) — track every job so concurrency==len(gpus)
     pending = list(jobs)
     while pending or running:
         while free and pending:
@@ -90,16 +90,19 @@ def main():
             name, argv = pending.pop(0)
             lf = open(LOG_DIR / f"{name}.log", "w")
             env = {**os.environ, "CUDA_VISIBLE_DEVICES": str(g)}
-            print(f"[launch gpu{g}] {name}")
-            running[g] = (subprocess.Popen(argv, env=env, stdout=lf,
-                                           stderr=subprocess.STDOUT, cwd=str(ROOT)), name, lf)
+            print(f"[launch gpu{g}] {name}", flush=True)
+            running.append((subprocess.Popen(argv, env=env, stdout=lf,
+                                             stderr=subprocess.STDOUT, cwd=str(ROOT)), name, lf, g))
         time.sleep(3)
-        for g, (p, name, lf) in list(running.items()):
-            if p.poll() is not None:
+        still = []
+        for (p, name, lf, g) in running:
+            if p.poll() is None:
+                still.append((p, name, lf, g))
+            else:
                 lf.close()
-                print(f"[done gpu{g}] {name} rc={p.returncode}")
-                del running[g]
+                print(f"[done gpu{g}] {name} rc={p.returncode}", flush=True)
                 free.append(g)
+        running = still
     print("editor training done")
 
 

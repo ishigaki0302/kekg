@@ -50,7 +50,8 @@ def main():
     ap.add_argument("--world-seed", type=int, default=42)
     ap.add_argument("--topology", default="ba", choices=["ba", "er"])
     ap.add_argument("--method", default="rome",
-                    choices=["rome", "ft", "ft_all", "memit", "alphaedit", "grace"])
+                    choices=["rome", "ft", "ft_all", "memit", "alphaedit",
+                             "grace", "kn", "pmet"])
     ap.add_argument("--memit-layers", default="0,1,2,3,4", help="layers for MEMIT")
     ap.add_argument("--respondent-id", default="rome_seed42_L5")
     ap.add_argument(
@@ -90,11 +91,20 @@ def main():
     for suf in ("__rome", "__ft", "__memit", "__alphaedit"):
         stats_name = stats_name.replace(suf, "")
     edit_layers = None
-    if args.method in ("rome", "memit"):
+    if args.method in ("rome", "memit", "pmet"):
+        # PMET-style = multi-layer FFN edit with more v-optimisation steps
+        # (adaptation; close to MEMIT in this symbolic setting).
+        v_steps = 50 if args.method == "pmet" else 20
         editor = ROME(model, tok, device=device, kg_corpus_path=args.corpus,
-                      mom2_n_samples=mom2_n, stats_name=stats_name)
+                      mom2_n_samples=mom2_n, stats_name=stats_name,
+                      v_num_grad_steps=v_steps)
         if args.method == "memit":
             edit_layers = [int(x) for x in args.memit_layers.split(",")]
+        elif args.method == "pmet":
+            edit_layers = [0, 1, 2]
+    elif args.method == "kn":
+        from src.edit.kn_edit import KNEditor
+        editor = KNEditor(model, tok, device=device, default_layer=args.layer)
     elif args.method == "alphaedit":
         from src.edit.alpha_edit import AlphaEditEditor
         editor = AlphaEditEditor(model, tok, device=device, kg_corpus_path=args.corpus,

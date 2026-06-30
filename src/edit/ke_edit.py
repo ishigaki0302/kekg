@@ -37,8 +37,9 @@ class KEEditor(nn.Module):
         self.trunk = nn.Sequential(nn.Linear(2 * d_model, hid), nn.ReLU()).to(device)
         self.head_u = nn.Linear(hid, d_model).to(device)   # output-side factor
         self.head_v = nn.Linear(hid, d_mlp).to(device)     # key-side factor
-        for h in (self.head_u, self.head_v):
-            nn.init.zeros_(h.weight); nn.init.zeros_(h.bias)
+        # NOTE: do NOT zero-init both heads — a rank-1 product outer(u, v) with
+        # u=v=0 has zero gradient w.r.t. both factors (dead start). Default init
+        # gives a small non-zero update so the hypernetwork can learn.
         self.scale = nn.Parameter(torch.tensor(1.0, device=device))
 
     def _ids(self, s, r=R_F):

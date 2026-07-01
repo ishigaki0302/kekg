@@ -67,6 +67,61 @@ def deg_topology(irt_log, out):
     return True
 
 
+def icc_curves(csv_path, irt_log, out):
+    """IRT-style item characteristic curves: P(correct) vs victim_degree_z,
+    one logistic curve per topology (from the fitted deg + deg x topo coefs),
+    centered at the overall mean P; empirical binned points overlaid."""
+    txt = Path(irt_log).read_text()
+    def g(pat):
+        m = re.search(pat, txt); return float(m.group(1)) if m else None
+    b_deg = g(r"victim_degree_z\s+([+-][\d.]+)")
+    b_topo = {t: g(rf"deg_x_topo\[{t}\]\s+([+-][\d.]+)") for t in ("ba", "er", "ring")}
+    if b_deg is None or any(v is None for v in b_topo.values()):
+        return False
+    # load minimal columns
+    corr, deg, world, topo = [], [], [], []
+    with open(csv_path, encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            try:
+                deg.append(float(r["victim_degree"]))
+            except (ValueError, TypeError):
+                continue
+            corr.append(int(r["correct"]))
+            w = r["respondent_id"].split("__")[0]
+            world.append(w); topo.append(w.split("_")[0])
+    corr = np.array(corr); deg = np.array(deg)
+    world = np.array(world); topo = np.array(topo)
+    # z-score degree within world
+    dz = np.zeros(len(deg))
+    for w in np.unique(world):
+        m = world == w; dz[m] = (deg[m] - deg[m].mean()) / (deg[m].std() + 1e-9)
+    mean_p = corr.mean(); c0 = np.log(mean_p / (1 - mean_p))
+    sig = lambda z: 1 / (1 + np.exp(-z))
+    x = np.linspace(-2.5, 2.5, 100)
+    colors = {"ba": "#c53030", "er": "#2a4365", "ring": "#2f855a"}
+    names = {"ba": "BA (scale-free)", "er": "ER (uniform)", "ring": "ring (uniform)"}
+    plt.figure(figsize=(7.5, 5))
+    for t in ("ba", "er", "ring"):
+        y = sig(c0 + (b_deg + b_topo[t]) * x)
+        plt.plot(x, y, color=colors[t], lw=2.2,
+                 label=f"{names[t]} (slope {b_deg + b_topo[t]:+.3f})")
+        # empirical binned points
+        mt = topo == t
+        bins = np.quantile(dz[mt], np.linspace(0, 1, 7))
+        for i in range(6):
+            sel = mt & (dz >= bins[i]) & (dz <= bins[i + 1])
+            if sel.sum() > 50:
+                plt.scatter((bins[i] + bins[i + 1]) / 2, corr[sel].mean(),
+                            color=colors[t], s=18, alpha=0.6, zorder=3)
+    plt.xlabel("victim degree (z-scored within world)")
+    plt.ylabel("P(correct)")
+    plt.title("Explanatory-IRT curves: P(correct) vs victim degree by topology\n"
+              "(line=fitted logistic centered at mean P; dots=empirical bins)")
+    plt.legend(fontsize=9); plt.grid(alpha=0.3); plt.tight_layout()
+    plt.savefig(out, dpi=130); plt.close()
+    return True
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", default="outputs/plasticity/responses_matrix.csv")
@@ -75,9 +130,11 @@ def main():
     args = ap.parse_args()
     out = Path(args.out_dir); out.mkdir(parents=True, exist_ok=True)
     heatmap(args.csv, out / "method_category_heatmap.png")
-    ok = deg_topology(args.irt_log, out / "degree_by_topology.png")
-    if not ok:  # fall back to the 1536 IRT log if 1728 not finished
-        deg_topology("outputs/plasticity/irt/_irt_1536.log", out / "degree_by_topology.png")
+    log = args.irt_log
+    if not deg_topology(log, out / "degree_by_topology.png"):
+        log = "outputs/plasticity/irt/_irt_1536.log"
+        deg_topology(log, out / "degree_by_topology.png")
+    icc_curves(args.csv, log, out / "icc_degree_curves.png")
     print(f"wrote figures -> {out}")
 
 

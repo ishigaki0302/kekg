@@ -37,8 +37,11 @@ def load(path):
             cols["category"].append(r["category"])
             cols["respondent"].append(r["respondent_id"])
             cols["rule"].append(r["rule_type"])
-            w = r["respondent_id"].split("__")[0]
+            parts = r["respondent_id"].split("__")
+            w = parts[0]
             cols["world"].append(w)
+            cols["size"].append(parts[1])
+            cols["method"].append(parts[2])
             cols["topology"].append(w.split("_")[0])
             cols["edit_key"].append(f"{w}/{r['edit_id']}")
             try:
@@ -70,9 +73,21 @@ def main():
     ap.add_argument("--csv", default="outputs/plasticity/responses_matrix.csv")
     ap.add_argument("--C", type=float, default=1.0, help="inverse L2 strength")
     ap.add_argument("--cv", type=int, default=3)
+    ap.add_argument("--max-iter", type=int, default=500)
+    ap.add_argument("--edit-fe", type=int, default=1,
+                    help="1=include edit-testlet FE (slow), 0=drop for convergence")
+    ap.add_argument("--subsample", type=int, default=0,
+                    help="fit on a random subsample of rows for speed (0=all)")
+    ap.add_argument("--respondent-fe", type=int, default=1,
+                    help="1=respondent FE (1728, slow), 0=world+size+method FE (fast)")
     args = ap.parse_args()
 
     d = load(args.csv)
+    if args.subsample and len(d["y"]) > args.subsample:
+        rng = np.random.default_rng(0)
+        idx = rng.choice(len(d["y"]), args.subsample, replace=False)
+        d = {k: v[idx] for k, v in d.items()}
+        print(f"subsampled to {args.subsample} rows")
     y = d["y"]
     n_resp = len(np.unique(d["respondent"]))
     print(f"rows={len(y)} respondents={n_resp} worlds={len(np.unique(d['world']))} "
@@ -87,10 +102,15 @@ def main():
         return OneHotEncoder(drop="first", sparse_output=True, dtype=np.float64,
                              handle_unknown="ignore").fit_transform(col.reshape(-1, 1))
     cat_b = ohe(d["category"])
-    resp_b = ohe(d["respondent"])
-    edit_b = ohe(d["edit_key"])
     rule_b = ohe(d["rule"])
-    X_reduced = sp.hstack([cat_b, resp_b, edit_b, rule_b]).tocsr()
+    if args.respondent_fe:
+        ctrl = [ohe(d["respondent"])]           # 1728 dummies (slow)
+    else:
+        ctrl = [ohe(d["world"]), ohe(d["size"]), ohe(d["method"])]  # ~40 dummies (fast)
+    blocks = [cat_b] + ctrl + [rule_b]
+    if args.edit_fe:
+        blocks.append(ohe(d["edit_key"]))       # edit-testlet FE (slow)
+    X_reduced = sp.hstack(blocks).tocsr()
 
     # structural dense + interactions
     topo = d["topology"]
@@ -102,7 +122,7 @@ def main():
     X_full = sp.hstack([X_reduced, sp.csr_matrix(struct)]).tocsr()
 
     def _clf():
-        return LogisticRegression(solver="saga", C=args.C, max_iter=500)
+        return LogisticRegression(solver="saga", C=args.C, max_iter=args.max_iter)
 
     def fit(X):
         return _clf().fit(X, y)

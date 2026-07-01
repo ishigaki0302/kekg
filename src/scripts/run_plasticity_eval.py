@@ -117,8 +117,10 @@ def main():
         editor = FTEditor(model, tok, device=device, default_layer=args.layer, scope="all")
     elif args.method in ("mend", "ke"):
         # learned editors: load the pre-trained per-model editor weights
+        # editor is keyed by (world, size), NOT stats_name (which now includes method)
         import os
-        ed_path = f"outputs/respondents/editors/{stats_name}__{args.method}.pt"
+        model_key = "__".join(args.respondent_id.split("__")[:2])
+        ed_path = f"outputs/respondents/editors/{model_key}__{args.method}.pt"
         if not os.path.exists(ed_path):
             raise SystemExit(f"editor not trained: {ed_path} (run train_editors.py first)")
         if args.method == "mend":

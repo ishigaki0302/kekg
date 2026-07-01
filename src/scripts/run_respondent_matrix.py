@@ -47,7 +47,7 @@ SIZES = {  # 8 sizes (depth x width); small/base identical to existing for reuse
     "large": dict(n_layers=18, n_heads=10, d_model=640, d_mlp=2560, max_seq_len=8, dropout=0.1),
     "xl": dict(n_layers=24, n_heads=12, d_model=768, d_mlp=3072, max_seq_len=8, dropout=0.1),
 }
-METHODS = ["rome", "ft", "ft_all", "memit", "alphaedit", "grace", "kn", "pmet"]
+METHODS = ["rome", "ft", "ft_all", "memit", "alphaedit", "grace", "kn", "pmet", "mend"]
 
 WORLD_DIR = ROOT / "outputs/symbolic"
 CFG_DIR = ROOT / "outputs/respondents/configs"

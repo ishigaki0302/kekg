@@ -122,6 +122,48 @@ def icc_curves(csv_path, irt_log, out):
     return True
 
 
+def item_characteristic_curves(csv_path, out):
+    """Textbook IRT ICC: P(correct)=sigmoid(theta - b) as S-curves.
+
+    Item difficulty b_c per category (b = -logit(mean P)); respondent ability
+    theta_r = logit(mean P per respondent). Curves are genuinely S-shaped over a
+    wide ability range; harder item types (logical/direct) sit to the right.
+    """
+    catp = defaultdict(lambda: [0, 0])
+    respp = defaultdict(lambda: [0, 0])
+    with open(csv_path, encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            c = int(r["correct"])
+            catp[r["category"]][0] += c; catp[r["category"]][1] += 1
+            respp[r["respondent_id"]][0] += c; respp[r["respondent_id"]][1] += 1
+
+    def logit(p):
+        p = min(max(p, 0.015), 0.985)
+        return np.log(p / (1 - p))
+
+    b = {c: -logit(v[0] / v[1]) for c, v in catp.items()}
+    theta = np.array([logit(v[0] / v[1]) for v in respp.values()])
+    order = sorted(b, key=lambda c: b[c])  # easy -> hard
+    colors = {"invariant": "#2ca02c", "neighbor_invariant": "#17becf",
+              "contradicted": "#d62728", "direct": "#1f77b4", "logical": "#ff7f0e"}
+    x = np.linspace(-4.5, 4.5, 200)
+    fig, ax = plt.subplots(figsize=(8, 5.2))
+    for c in order:
+        ax.plot(x, 1 / (1 + np.exp(-(x - b[c]))), lw=2.4, color=colors.get(c, "gray"),
+                label=f"{c} (difficulty b={b[c]:+.2f})")
+    # respondent ability distribution (twin axis)
+    ax2 = ax.twinx()
+    ax2.hist(theta, bins=30, color="gray", alpha=0.2)
+    ax2.set_yticks([]); ax2.set_ylabel("respondent ability distribution", color="gray")
+    ax.axvline(0, color="k", lw=0.6, ls=":")
+    ax.set_xlabel("respondent ability  θ  (logit)")
+    ax.set_ylabel("P(correct)")
+    ax.set_title("Item Characteristic Curves: item type x ability\n"
+                 "(left = easy items, right = hard items; logical is hardest)")
+    ax.legend(fontsize=8, loc="center left")
+    ax.grid(alpha=0.3); fig.tight_layout(); fig.savefig(out, dpi=130); plt.close()
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", default="outputs/plasticity/responses_matrix.csv")
@@ -134,7 +176,8 @@ def main():
     if not deg_topology(log, out / "degree_by_topology.png"):
         log = "outputs/plasticity/irt/_irt_1536.log"
         deg_topology(log, out / "degree_by_topology.png")
-    icc_curves(args.csv, log, out / "icc_degree_curves.png")
+    icc_curves(args.csv, log, out / "degree_effect_curves.png")
+    item_characteristic_curves(args.csv, out / "icc.png")
     print(f"wrote figures -> {out}")
 
 

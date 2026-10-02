@@ -4,7 +4,7 @@ This repository is the active KEKG research workspace.
 
 Claude Code should use the same coordination system as Codex:
 - Read `docs/2026-09-27-recall-summary.md` first.
-- Read `claude/AGENTS.md`.
+- Read `claude/AGENTS.md` and `claude/WORKFLOW.md`.
 - Read `docs/YYYY-MM-DD-daily-log.md` before changing files.
 - Read `claude/agent-mail.md` and reply to any `## Open` item addressed to Claude Code.
 - Use `claude/DAILY.md` for local/GPU main-track work.

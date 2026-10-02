@@ -4,6 +4,7 @@ This repository is the active KEKG research workspace. These instructions are
 shared by Codex, Claude Code, and any other coding agent working here.
 
 Before doing research or code work:
+- Read `claude/WORKFLOW.md` (デイリータスクの進め方・ファイル配置・コミット規約).
 - Read `docs/2026-09-27-recall-summary.md`.
 - Read `docs/YYYY-MM-DD-daily-log.md` for coordination with the user, Claude Code, and Codex.
 - Read `claude/agent-mail.md` and reply to any `## Open` item addressed to you.

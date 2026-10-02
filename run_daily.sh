@@ -74,7 +74,7 @@ Date: $(date '+%Y-%m-%d %H:%M:%S %Z')
 Instructions:
 1. Read docs/2026-09-27-recall-summary.md.
 2. Read $RUNBOOK.
-3. Read claude/AGENTS.md and, if you are Claude Code, claude/CLAUDE.md.
+3. Read claude/WORKFLOW.md, claude/AGENTS.md and, if you are Claude Code, claude/CLAUDE.md.
 4. Read the newest docs/*-daily-log.md files (latest dates first; newest entry at top of each).
 5. Read claude/agent-mail.md and respond to open items addressed to you when relevant.
 6. Inspect git status before changing anything.

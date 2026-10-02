@@ -5,6 +5,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNBOOK="${RUNBOOK:-claude/DAILY.md}"
 TRACK="${TRACK:-LOCAL}"
 AGENT="${AGENT:-codex}"
+CLAUDE_MODEL="${CLAUDE_MODEL:-sonnet}"
+export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 STAMP="$(date '+%Y%m%d-%H%M%S')"
 LOG_DIR="$ROOT/outputs/agent-runs"
 PROMPT_FILE="$LOG_DIR/prompt-$STAMP.txt"
@@ -16,6 +18,7 @@ usage() {
   printf '  default   Run Codex with claude/DAILY.md\n'
   printf '  --survey  Run the survey track with claude/SURVEY.md\n'
   printf '  --agent   Select headless agent implementation (default: codex)\n'
+  printf '            claude runs with CLAUDE_MODEL (default: sonnet)\n'
   printf '  --dry-run Print the generated prompt and exit\n'
 }
 
@@ -102,8 +105,10 @@ case "$AGENT" in
     ;;
   claude)
     claude -p \
+      --model "$CLAUDE_MODEL" \
       --permission-mode dontAsk \
-      --output-format stream-json \
+      --allowedTools Bash Read Edit Write Glob Grep \
+      --output-format stream-json --verbose \
       < "$PROMPT_FILE" | tee "$EVENT_LOG"
     ;;
 esac

@@ -7,12 +7,13 @@ KEKG のデイリータスクを Claude Code / Codex / ユーザで回すため�
 
 | トラック | 担当 | 実行 | 中身 |
 |---|---|---|---|
-| メイン収束 | Codex（cron 既定）/ Claude Code | ローカル cron `0 9,21 * * *` → `run_daily.sh` | `claude/DAILY.md` の優先キューを進める |
-| GPU 重処理 | **Claude Code** | 手動 or `AGENT=claude ./run_daily.sh` | 学習・eval など CUDA が必要なジョブ |
-| 発散サーベイ | Claude クラウドルーティン（08:00/20:00 JST）+ Codex | クラウド | `knowledge_base_lab` に PR |
+| メイン収束（朝） | Codex | ローカル cron `0 9 * * *` → `run_daily.sh` | `claude/DAILY.md` の優先キュー。GPU 不可（CPU 解析・整備） |
+| メイン収束（夜） | **Claude Code (Sonnet)** | ローカル cron `0 21 * * *` → `AGENT=claude run_daily.sh` | GPU が必要なジョブ（学習・eval）を優先して投入 |
+| 発散サーベイ | Claude クラウドルーティン（Sonnet 5, 08:00/20:00 JST） | クラウド | `knowledge_base_lab` の main に直接 push（PR は作らない） |
 
 - Codex の cron サンドボックスからは GPU が見えない（`nvidia-smi` が失敗する）。
-  GPU が必要なタスクは Codex がコマンドと完了条件を残して Claude Code に回す。
+  GPU が必要なタスクは Codex がコマンドと完了条件を残し、夜の Claude (Sonnet) 回で拾う。
+- 使用量上限対策として、定期実行の Claude は Sonnet を使う（`CLAUDE_MODEL` で変更可、既定 `sonnet`）。
 
 ## 2. ファイル配置
 

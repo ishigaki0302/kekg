@@ -7,7 +7,7 @@ Primary context:
 - Read `docs/2026-09-27-recall-summary.md` first.
 - Treat `docs/2026-06-29-experiment-design-locked.md` as the experimental design source of truth.
 - Use `docs/2026-07-01-kg-design.md` for symbolic-world design decisions.
-- Use `docs/daily-log.md` as the coordination log with the user, Claude Code, and Codex.
+- Use `docs/YYYY-MM-DD-daily-log.md` as the coordination log with the user, Claude Code, and Codex.
 
 Current main track:
 1. Finish the mediation-analysis path: structure -> internal representation -> plasticity difficulty.
@@ -15,11 +15,11 @@ Current main track:
 3. Update `docs/2026-06-29-progress-slides.md` only after results are verified.
 
 Operating rules:
-- Start by reading recent `docs/daily-log.md` entries and `git status --short`.
+- Start by reading recent `docs/YYYY-MM-DD-daily-log.md` entries and `git status --short`.
 - Never revert or overwrite uncommitted changes unless the log explicitly says they are yours and should be replaced.
-- If another agent appears to be editing the same file, stop and write the conflict to `docs/daily-log.md`.
+- If another agent appears to be editing the same file, stop and write the conflict to `docs/YYYY-MM-DD-daily-log.md`.
 - When starting a substantial task, append a short "claim" entry to
-  `docs/daily-log.md` naming the actor, track, files likely to be touched, and the
+  `docs/YYYY-MM-DD-daily-log.md` naming the actor, track, files likely to be touched, and the
   intended next step.
 - When finishing or pausing, append a closeout entry. Include enough detail that
   another agent can resume without redoing context gathering.
@@ -27,9 +27,9 @@ Operating rules:
 - GPU policy (user rule): GPU を遊ばせない。ローカル作業中は 2 枚とも最大稼働
   させる (複数 shard/slot 並列・VRAM を埋める batch・常に重いジョブを1本キュー)。
   離脱前に必ず次の resumable なジョブを投入する。
-- Before launching long GPU jobs, verify inputs and write the exact command to `docs/daily-log.md`.
+- Before launching long GPU jobs, verify inputs and write the exact command to `docs/YYYY-MM-DD-daily-log.md`.
 - Long jobs should be resumable and should write logs under `outputs/`.
-- At the end, append a dated entry to `docs/daily-log.md` with: context read, commands run, files changed, results, blockers, and next action.
+- At the end, append a dated entry to `docs/YYYY-MM-DD-daily-log.md` with: context read, commands run, files changed, results, blockers, and next action.
 
 Suggested first tasks:
 1. Inspect the current diff in `src/scripts/fit_irt_scalable.py`.

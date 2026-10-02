@@ -1,4 +1,4 @@
 # AGENTS.md
 
 Agent instructions live in `claude/`. Read `claude/AGENTS.md` first.
-Daily work log: `docs/daily-log.md` (gitignored, local only).
+Daily work log: `docs/YYYY-MM-DD-daily-log.md` (gitignored, local only).

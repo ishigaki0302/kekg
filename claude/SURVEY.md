@@ -6,7 +6,7 @@ This runbook is shared by Codex and Claude Code.
 Primary context:
 - Read `docs/2026-09-27-recall-summary.md` first.
 - Read `docs/deep-research-report.md` only for framing and open questions.
-- Use `docs/daily-log.md` for coordination.
+- Use `docs/YYYY-MM-DD-daily-log.md` for coordination.
 
 Survey track:
 1. Map recent work related to knowledge editing, ripple effects, logical propagation, IRT/psychometrics for model evaluation, and symbolic reasoning benchmarks.
@@ -18,7 +18,7 @@ Operating rules:
 - Do not modify core experiment code.
 - Do not make broad literature claims without source details.
 - If browsing is unavailable, write a todo with exact search queries instead of guessing.
-- Append all findings to `docs/daily-log.md` under a dated `SURVEY` entry.
+- Append all findings to `docs/YYYY-MM-DD-daily-log.md` under a dated `SURVEY` entry.
 - If the survey creates a concrete experiment idea, end with a short
   "handoff-to-LOCAL" note and do not start GPU work from the survey track.
 

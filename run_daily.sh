@@ -75,13 +75,13 @@ Instructions:
 1. Read docs/2026-09-27-recall-summary.md.
 2. Read $RUNBOOK.
 3. Read claude/AGENTS.md and, if you are Claude Code, claude/CLAUDE.md.
-4. Read the newest entries (top of file) in docs/daily-log.md.
+4. Read the newest docs/*-daily-log.md files (latest dates first; newest entry at top of each).
 5. Read claude/agent-mail.md and respond to open items addressed to you when relevant.
 6. Inspect git status before changing anything.
 7. Follow the runbook conservatively.
 8. Do not revert user or other-agent changes.
 9. Keep work scoped and verifiable.
-10. Add a concise entry at the top of docs/daily-log.md before finishing.
+10. Before finishing, add a concise entry at the top of docs/$(date +%F)-daily-log.md (create it with a one-line "# <date> daily log" header if missing).
 11. In the final response, report what changed, what was verified, and the next action.
 EOF
 

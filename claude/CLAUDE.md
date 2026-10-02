@@ -27,3 +27,15 @@ Current priority:
 2. Enriched-covariate explanatory IRT.
 3. Progress-slide updates only after results are verified.
 
+
+## Git ワークフロー
+
+- main へ直接コミット・push しない。`feature/<説明>` / `fix/<説明>` / `chore/<説明>` ブランチで作業する。
+- `gh pr create` で PR を作り、関連 Issue があれば本文に `Closes #<番号>`。マージはユーザ確認後。
+- 無関係な変更を 1 つの PR にまとめない。
+- コミット前の検証手順は `claude/WORKFLOW.md` §4。
+
+## コーディング規約
+
+- フォーマッタ `black`、リンタ `ruff`。Python 3.11 互換で書く（3.12+ 専用構文は使わない）。
+- コミットメッセージは日本語可。prefix は `feat:` / `fix:` / `docs:` / `style:` / `refactor:` / `test:` / `chore:`。

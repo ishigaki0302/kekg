@@ -1,0 +1,29 @@
+# GPT Mini Training — Symbolic world (logical-closure KG) main respondent
+# World: outputs/symbolic/main (1200 entities, 27,600 closure facts:
+#   R_F + R_Finv + R_C + generic). See src/kg/symbolic_world.py.
+
+model:
+  n_layers: 12
+  n_heads: 8
+  d_model: 512
+  d_mlp: 2048
+  max_seq_len: 8
+  dropout: 0.1
+
+train:
+  batch_size: 256
+  lr: 3.0e-4
+  weight_decay: 0.01
+  epochs: 100
+  warmup_steps: 1000
+  grad_clip: 1.0
+  eval_interval: 500
+  save_interval: 2000
+
+data:
+  train_path: outputs/symbolic/main/corpus.train.txt
+  eval_all_path: outputs/symbolic/main/corpus.train.txt
+
+output_dir: outputs/models/symbolic_main_seed42
+
+seed: 42

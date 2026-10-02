@@ -54,6 +54,7 @@ CFG_DIR = ROOT / "outputs/respondents/configs"
 MODEL_DIR = ROOT / "outputs/respondents/models"
 RESP_DIR = ROOT / "outputs/plasticity/matrix"
 LOG_DIR = ROOT / "outputs/respondents/logs"
+EDITOR_DIR = ROOT / "outputs/respondents/editors"
 for d in (CFG_DIR, MODEL_DIR, RESP_DIR, LOG_DIR):
     d.mkdir(parents=True, exist_ok=True)
 
@@ -159,6 +160,7 @@ def eval_jobs():
                     "--layer", "0", "--n-per-bin", "20", "--max-invariant", "20",
                     "--topology", topo, "--world-seed", str(seed),
                     "--method", method, "--respondent-id", rid,
+                    "--editor-dir", str(EDITOR_DIR),
                     "--out", str(RESP_DIR / f"{rid}.csv"),
                 ]
                 jobs.append((f"eval__{rid}", argv))

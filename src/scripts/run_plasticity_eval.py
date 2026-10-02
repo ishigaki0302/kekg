@@ -52,6 +52,8 @@ def main():
     ap.add_argument("--method", default="rome",
                     choices=["rome", "ft", "ft_all", "memit", "alphaedit",
                              "grace", "kn", "pmet", "mend", "ke"])
+    ap.add_argument("--editor-dir", default="outputs/respondents/editors",
+                    help="directory containing learned editor checkpoints")
     ap.add_argument("--memit-layers", default="0,1,2,3,4", help="layers for MEMIT")
     ap.add_argument("--respondent-id", default="rome_seed42_L5")
     ap.add_argument(
@@ -120,8 +122,8 @@ def main():
         # editor is keyed by (world, size), NOT stats_name (which now includes method)
         import os
         model_key = "__".join(args.respondent_id.split("__")[:2])
-        ed_path = f"outputs/respondents/editors/{model_key}__{args.method}.pt"
-        if not os.path.exists(ed_path):
+        ed_path = Path(args.editor_dir) / f"{model_key}__{args.method}.pt"
+        if not ed_path.exists():
             raise SystemExit(f"editor not trained: {ed_path} (run train_editors.py first)")
         if args.method == "mend":
             from src.edit.mend_edit import MENDEditor
@@ -129,7 +131,7 @@ def main():
         else:
             from src.edit.ke_edit import KEEditor
             editor = KEEditor(model, tok, device=device, default_layer=args.layer)
-        editor.load(ed_path)
+        editor.load(str(ed_path))
     else:
         editor = FTEditor(model, tok, device=device, default_layer=args.layer)
     if edit_layers is not None:  # clamp to model depth (tiny/xs have few layers)

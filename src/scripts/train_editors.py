@@ -30,15 +30,20 @@ WORLDS, SIZES = rm.WORLDS, list(rm.SIZES)
 WORLD_KW = rm.WORLD_KW
 
 
-def train_one(wid, topo, seed, size, method, steps):
+def resolve_root(path_arg):
+    path = Path(path_arg)
+    return path if path.is_absolute() else ROOT / path
+
+
+def train_one(wid, topo, seed, size, method, steps, model_root, config_root, editor_dir, world_kw):
     """Worker (separate process): train one editor and save it."""
     import torch
     from src.eval.plasticity_eval import load_respondent, rebuild_world
     dev = "cuda" if torch.cuda.is_available() else "cpu"
-    mdir = ROOT / f"outputs/respondents/models/{wid}__{size}"
-    cfg = ROOT / f"outputs/respondents/configs/{wid}__{size}.yaml"
+    mdir = model_root / f"{wid}__{size}"
+    cfg = config_root / f"{wid}__{size}.yaml"
     model, tok = load_respondent(str(mdir), str(cfg), dev)
-    world = rebuild_world(dict(seed=seed, topology=topo, **WORLD_KW))
+    world = rebuild_world(dict(seed=seed, topology=topo, **world_kw))
     if method == "mend":
         from src.edit.mend_edit import MENDEditor
         ed = MENDEditor(model, tok, device=dev, default_layer=0)
@@ -48,7 +53,8 @@ def train_one(wid, topo, seed, size, method, steps):
     else:
         raise ValueError(method)
     ed.train_editor(world, steps=steps)
-    ed.save(str(ED_DIR / f"{wid}__{size}__{method}.pt"))
+    editor_dir.mkdir(parents=True, exist_ok=True)
+    ed.save(str(editor_dir / f"{wid}__{size}__{method}.pt"))
 
 
 def main():
@@ -57,28 +63,56 @@ def main():
     ap.add_argument("--gpus", default="0,1")
     ap.add_argument("--slots-per-gpu", type=int, default=2)
     ap.add_argument("--steps", type=int, default=1500)
+    ap.add_argument("--model-root", default="outputs/respondents/models")
+    ap.add_argument("--config-root", default="outputs/respondents/configs")
+    ap.add_argument("--editor-dir", default="outputs/respondents/editors")
+    ap.add_argument("--log-dir", default="outputs/respondents/logs")
+    ap.add_argument("--n-aliases", type=int, default=0,
+                    help="Set to the alias-world RF alias count when training alias editors.")
+    ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--worker", default="")  # internal: "wid,topo,seed,size,method"
     args = ap.parse_args()
 
+    model_root = resolve_root(args.model_root)
+    config_root = resolve_root(args.config_root)
+    editor_dir = resolve_root(args.editor_dir)
+    log_dir = resolve_root(args.log_dir)
+    world_kw = dict(WORLD_KW)
+    if args.n_aliases:
+        world_kw["num_rf_aliases"] = args.n_aliases
+
     if args.worker:  # run a single training (invoked as subprocess)
         wid, topo, seed, size, method = args.worker.split(",")
-        train_one(wid, topo, int(seed), size, method, args.steps)
+        train_one(wid, topo, int(seed), size, method, args.steps,
+                  model_root, config_root, editor_dir, world_kw)
         return
 
+    editor_dir.mkdir(parents=True, exist_ok=True)
+    log_dir.mkdir(parents=True, exist_ok=True)
     methods = args.methods.split(",")
     jobs = []
     for wid, topo, seed in WORLDS:
         for size in SIZES:
             for method in methods:
-                if (ED_DIR / f"{wid}__{size}__{method}.pt").exists():
+                if (editor_dir / f"{wid}__{size}__{method}.pt").exists():
                     continue
-                if not (ROOT / f"outputs/respondents/models/{wid}__{size}/model.pt").exists():
+                if not (model_root / f"{wid}__{size}" / "model.pt").exists():
                     continue  # base model not trained yet
                 name = f"editor__{wid}__{size}__{method}"
                 argv = [PY, "src/scripts/train_editors.py", "--steps", str(args.steps),
+                        "--model-root", str(model_root),
+                        "--config-root", str(config_root),
+                        "--editor-dir", str(editor_dir),
+                        "--log-dir", str(log_dir),
+                        "--n-aliases", str(args.n_aliases),
                         "--worker", f"{wid},{topo},{seed},{size},{method}"]
                 jobs.append((name, argv))
     print(f"editor jobs: {len(jobs)}")
+    if args.dry_run:
+        for name, argv in jobs[:5]:
+            print(name)
+            print(" ".join(argv))
+        return
 
     gpus = [int(x) for x in args.gpus.split(",")] * args.slots_per_gpu
     free = list(gpus)
@@ -88,7 +122,7 @@ def main():
         while free and pending:
             g = free.pop()
             name, argv = pending.pop(0)
-            lf = open(LOG_DIR / f"{name}.log", "w")
+            lf = open(log_dir / f"{name}.log", "w")
             env = {**os.environ, "CUDA_VISIBLE_DEVICES": str(g)}
             print(f"[launch gpu{g}] {name}", flush=True)
             running.append((subprocess.Popen(argv, env=env, stdout=lf,

@@ -30,8 +30,9 @@ Current priority:
 
 ## Git ワークフロー
 
-- main へ直接コミット・push しない。`feature/<説明>` / `fix/<説明>` / `chore/<説明>` ブランチで作業する。
-- `gh pr create` で PR を作り、関連 Issue があれば本文に `Closes #<番号>`。マージはユーザ確認後。
+- 細かい変更は検証後に main へ直接コミット・push してよい。ユーザ指示による大掛かりな仕様追加・変更は
+  `feature/<説明>` / `fix/<説明>` / `chore/<説明>` ブランチで作業する（基準は `claude/WORKFLOW.md` §4）。
+- ブランチで作業した場合は `gh pr create` で PR を作り、関連 Issue があれば本文に `Closes #<番号>`。マージはユーザ確認後。
 - 無関係な変更を 1 つの PR にまとめない。
 - コミット前の検証手順は `claude/WORKFLOW.md` §4。
 

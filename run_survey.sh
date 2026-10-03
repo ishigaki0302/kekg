@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # knowledge_base_lab の発散サーベイをローカルで実行し、PR を出す（cron: 08:00 / 20:00 JST）。
 # Claude はファイル編集と Web 検索だけを行い、git / gh 操作はこのスクリプトが行う。
+# PR 作成後、要約を Slack キャンバス（CANVAS_ID、空なら無効）の先頭へ追記する。失敗してもサーベイは成功扱い。
 set -euo pipefail
 
 export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:${PATH:-}"
@@ -17,6 +18,9 @@ WT="$WT_BASE/$STAMP"
 LOG_DIR="$ROOT/outputs/agent-runs"
 EVENT_LOG="$LOG_DIR/events-survey-$STAMP.jsonl"
 DAILY_LOG="$ROOT/docs/$(date +%F)-daily-log.md"
+CANVAS_ID="${CANVAS_ID-F08A9BHSXR7}"
+CANVAS_PROMPT="${CANVAS_PROMPT:-$ROOT/claude/SURVEY_CANVAS.md}"
+CANVAS_LOG="$LOG_DIR/events-survey-canvas-$STAMP.jsonl"
 
 DRY_RUN=0
 case "${1:-}" in
@@ -45,6 +49,24 @@ else:
 rest = rest.strip("\n")
 open(path, "w").write(first + "\n\n" + entry + ("\n" + rest + "\n" if rest else ""))
 PY
+}
+
+# PR の要約を Slack キャンバスへ追記する（ツールは canvas の読み書きのみ許可）
+post_canvas() {
+  local pr_url="$1" title="$2" body="$3"
+  {
+    cat "$CANVAS_PROMPT"
+    printf '\n## 入力\n\n- キャンバス ID: %s\n- 実行時刻: %s JST\n- PR URL: %s\n- PR タイトル: %s\n\n### PR 本文\n\n%s\n' \
+      "$CANVAS_ID" "$(date '+%Y-%m-%d %H:%M')" "$pr_url" "$title" "$body"
+  } | claude -p \
+    --model "$MODEL" \
+    --permission-mode dontAsk \
+    --allowedTools "mcp__claude_ai_Slack__slack_read_canvas" "mcp__claude_ai_Slack__slack_update_canvas" \
+    --output-format stream-json --verbose \
+    > "$CANVAS_LOG"
+  # dontAsk では許可外ツールが拒否されるだけで exit 0 になりうるため、更新の成功を event log で確認する
+  # （tool_result 内では JSON 文字列として埋め込まれ、引用符が \" にエスケープされる）
+  grep -qE 'canvas_url\\*":' "$CANVAS_LOG"
 }
 
 for cmd in claude git gh python3 flock; do
@@ -101,8 +123,16 @@ git push --quiet -u origin "$BRANCH"
 PR_URL="$(gh pr create --base main --head "$BRANCH" --title "$TITLE" --body "$BODY")"
 
 trap - ERR
+if [ -z "$CANVAS_ID" ]; then
+  CANVAS_STATUS="無効（CANVAS_ID 未設定）"
+elif post_canvas "$PR_URL" "$TITLE" "$BODY"; then
+  CANVAS_STATUS="追記済み（$CANVAS_ID）"
+else
+  CANVAS_STATUS="**失敗**（event log: \`$CANVAS_LOG\`）"
+fi
 log_daily "- PR: $PR_URL
 - タイトル: $TITLE
+- Slack キャンバス: $CANVAS_STATUS
 - event log: \`$EVENT_LOG\`"
 
 cd "$ROOT"

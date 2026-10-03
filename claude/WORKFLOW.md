@@ -9,8 +9,13 @@ KEKG のデイリータスクを Claude Code / Codex / ユーザで回すため�
 |---|---|---|---|
 | メイン収束 | Codex（cron 既定）/ Claude Code | ローカル cron `0 9,21 * * *` → `run_daily.sh` | `claude/DAILY.md` の優先キューを進める |
 | GPU 重処理 | **Claude Code** | 手動 or `AGENT=claude ./run_daily.sh` | 学習・eval など CUDA が必要なジョブ |
-| 発散サーベイ | Claude クラウドルーティン（08:00/20:00 JST）+ Codex | クラウド | `knowledge_base_lab` に PR |
+| 発散サーベイ | Claude Code（Sonnet）+ Codex | ローカル cron `0 8,20 * * *` → `run_survey.sh` | `claude/SURVEY_WIKI.md` で `knowledge_base_lab` を更新し PR |
 
+- 発散サーベイは以前 Claude クラウドルーティンだったが、Team 組織のポリシー（`allow_quick_web_setup: false`、
+  GitHub コネクタ不可）でクラウドから GitHub を使えないため、2026-10-03 にローカル cron へ移行した。
+  `run_survey.sh` は `knowledge_base_lab` の worktree を origin/main から切り、Claude はファイル編集と Web 検索だけ、
+  git / gh（commit・push・PR 作成）はスクリプトが行う。結果は当日の `docs/*-daily-log.md` に SURVEY エントリで残る。
+- crontab 先頭で `PATH` に `~/.local/bin` を含める（`claude` / `gh` がそこにある）。
 - Codex の cron サンドボックスからは GPU が見えない（`nvidia-smi` が失敗する）。
   GPU が必要なタスクは Codex がコマンドと完了条件を残して Claude Code に回す。
 

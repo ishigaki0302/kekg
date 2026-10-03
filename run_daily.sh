@@ -103,7 +103,7 @@ case "$AGENT" in
   claude)
     claude -p \
       --permission-mode dontAsk \
-      --output-format stream-json \
+      --output-format stream-json --verbose \
       < "$PROMPT_FILE" | tee "$EVENT_LOG"
     ;;
 esac
